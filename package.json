@@ -1,0 +1,27 @@
+{
+  "name": "mac-price-compare",
+  "version": "1.0.0",
+  "description": "A web application for comparing prices of Mac products from various sources.",
+  "main": "src/js/main.js",
+  "scripts": {
+    "start": "live-server src",
+    "build": "echo 'Build process not defined yet.'",
+    "test": "echo 'No tests defined.'"
+  },
+  "keywords": [
+    "mac",
+    "price",
+    "comparison",
+    "web",
+    "application"
+  ],
+  "author": "Your Name",
+  "license": "MIT",
+  "dependencies": {
+    "chart.js": "^3.7.0",
+    "papaparse": "^5.3.0"
+  },
+  "devDependencies": {
+    "live-server": "^1.2.1"
+  }
+}

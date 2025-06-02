@@ -1,0 +1,2988 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mac 價格比較工具</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang TC', 'Hiragino Sans GB', sans-serif;
+            background-color: #F2F2F7; /* Blueprint: 背景色 */
+            color: #1D1D1F; /* Blueprint: 文字色 */
+            line-height: 1.5;
+        }
+
+        .header {
+            background: #007AFF; /* Blueprint: 主色 */
+            color: white;
+            padding: 2rem 0;
+            text-align: center;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+        }
+
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        .input-section {
+            background: white;
+            border-radius: 12px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+        }
+
+        .input-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .input-group label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            color: #1D1D1F;
+        }
+
+        .url-input {
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid #E5E5EA;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s ease;
+        }
+
+        .url-input:focus {
+            outline: none;
+            border-color: #007AFF; /* Blueprint: 主色 */
+        }
+
+        .btn {
+            background: #007AFF; /* Blueprint: 主色 */
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .btn:hover {
+            background: #005bb5; /* Darker shade of Apple Blue */
+            transform: translateY(-1px);
+        }
+
+        .btn-secondary {
+            background: #34C759; /* Blueprint: 次要色 */
+        }
+
+        .btn-secondary:hover {
+            background: #28a745; /* Darker shade of System Green */
+        }
+
+        .filters-section {
+            display: grid;
+            grid-template-columns: 300px 1fr;
+            gap: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        .filters-panel {
+            background: white;
+            border-radius: 12px;
+            padding: 1.5rem;
+            height: fit-content;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+        }
+
+        .filter-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .filter-group h3 {
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-bottom: 0.8rem;
+            color: #1D1D1F;
+            border-bottom: 2px solid #F2F2F7;
+            padding-bottom: 0.5rem;
+        }
+
+        .filter-options {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .filter-option {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .filter-option input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            accent-color: #007AFF;
+        }
+
+        .filter-option label {
+            font-size: 0.9rem;
+            color: #666;
+            cursor: pointer;
+        }
+
+        .price-range {
+            display: flex;
+            gap: 0.5rem;
+            align-items: center;
+        }
+
+        .price-input {
+            width: 100px;
+            padding: 8px 12px;
+            border: 1px solid #E5E5EA;
+            border-radius: 6px;
+            font-size: 14px;
+        }
+
+        .results-section {
+            background: white;
+            border-radius: 12px;
+            padding: 1.5rem;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+        }
+
+        .results-header {
+            display: flex;
+            justify-content: space-between; /* Corrected from 'between' */
+            align-items: center;
+            margin-bottom: 1.5rem;
+            padding-bottom: 1rem;
+            border-bottom: 2px solid #F2F2F7;
+        }
+
+        .view-toggle {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .view-btn {
+            padding: 8px 16px;
+            border: 1px solid #E5E5EA;
+            background: white;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .view-btn.active {
+            background: #007AFF; /* Blueprint: 主色 */
+            color: white;
+            border-color: #007AFF; /* Blueprint: 主色 */
+        }
+
+        .products-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .product-card {
+            border: 1px solid #E5E5EA;
+            border-radius: 12px;
+            padding: 1.5rem;
+            transition: all 0.3s ease;
+            background: white;
+        }
+
+        .product-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+        }
+
+        .product-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 1rem;
+        }
+
+        .product-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: #1D1D1F;
+        }
+
+        .condition-badge {
+            padding: 4px 8px;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+
+        .condition-new { background: #30D158; color: white; } /* Blueprint: 成功色 */
+        .condition-refurbished { background: #FF9500; color: white; } /* Blueprint: 強調色 */
+        .condition-used-a { background: #34C759; color: white; } /* Blueprint: 次要色 (for good condition used) */
+        .condition-used-b { background: #FFCC00; color: #1D1D1F; } /* Yellow for B grade */
+        .condition-used-c { background: #FF6B35; color: white; } /* Orange-Red for C grade */
+        .condition-student { background: #007AFF; color: white; } /* Blueprint: 主色 */
+
+        .product-specs {
+            margin-bottom: 1rem;
+        }
+
+        .spec-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 0.3rem 0;
+            font-size: 0.9rem;
+            border-bottom: 1px solid #F2F2F7;
+        }
+
+        .spec-label {
+            color: #666;
+            font-weight: 500;
+        }
+
+        .spec-value {
+            color: #1D1D1F;
+            font-weight: 600;
+        }
+
+        .product-price {
+            text-align: center;
+            margin-bottom: 1rem;
+        }
+
+        .price-amount {
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: #007AFF; /* Blueprint: 主色 */
+        }
+
+        .price-currency {
+            font-size: 1rem;
+            color: #666;
+            margin-left: 0.2rem;
+        }
+
+        .product-source {
+            text-align: center;
+            font-size: 0.9rem;
+            color: #666;
+            margin-bottom: 1rem;
+        }
+
+        .product-actions {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .btn-small {
+            flex: 1;
+            padding: 8px 16px;
+            font-size: 0.9rem;
+            border-radius: 6px;
+        }
+
+        .comparison-section {
+            margin-top: 2rem;
+            background: white;
+            border-radius: 12px;
+            padding: 1.5rem;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+        }
+
+        .chart-container {
+            margin-top: 1.5rem;
+            height: 400px;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 3rem;
+            color: #666;
+        }
+
+        .loading-spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid #F2F2F7;
+            border-top: 4px solid #007AFF; /* Blueprint: 主色 */
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 1rem;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .stat-card {
+            background: #F8F9FA;
+            padding: 1rem;
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        .stat-number {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #007AFF; /* Blueprint: 主色 */
+        }
+
+        .stat-label {
+            font-size: 0.9rem;
+            color: #666;
+            margin-top: 0.2rem;
+        }
+
+        .analysis-tab {
+            padding: 12px 20px;
+            border: none;
+            background: transparent;
+            color: #666;
+            font-weight: 600;
+            cursor: pointer;
+            border-bottom: 3px solid transparent;
+            transition: all 0.3s ease;
+        }
+
+        .analysis-tab.active {
+            color: #007AFF; /* Blueprint: 主色 */
+            border-bottom-color: #007AFF; /* Blueprint: 主色 */
+        }
+
+        .analysis-tab:hover {
+            color: #007AFF; /* Blueprint: 主色 */
+            background: rgba(0, 122, 255, 0.05);
+        }
+
+        .analysis-panel {
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .price-difference-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.8rem;
+            margin-bottom: 0.5rem;
+            background: white;
+            border-radius: 6px;
+            border-left: 4px solid #007AFF; /* Blueprint: 主色 */
+        }
+
+        .price-difference-positive {
+            border-left-color: #30D158; /* Blueprint: 成功色 */
+        }
+
+        .price-difference-negative {
+            border-left-color: #FF3B30; /* Red for negative difference */
+        }
+
+        .specs-comparison-grid {
+            display: grid;
+            grid-template-columns: 200px repeat(auto-fill, minmax(150px, 1fr));
+            gap: 1px;
+            background: #E5E5EA;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .specs-cell {
+            background: white;
+            padding: 0.8rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            font-size: 0.9rem;
+        }
+
+        .specs-header {
+            background: #F8F9FA;
+            font-weight: 600;
+            color: #1D1D1F;
+        }
+
+        .specs-different {
+            background: #FFF3CD; /* Light yellow for highlighting differences */
+            border-left: 3px solid #FF9500; /* Blueprint: 強調色 */
+        }
+
+        .prompt-section {
+            background: white;
+            border: 1px solid #E5E5EA;
+            border-radius: 8px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            font-family: 'Monaco', 'Menlo', monospace;
+            font-size: 0.9rem;
+            line-height: 1.6;
+            white-space: pre-wrap;
+        }
+
+        .performance-badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            margin-left: 0.5rem;
+        }
+        
+        /* Database Modal Styles */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0,0,0,0.4);
+        }
+
+        .modal-content {
+            background-color: #F2F2F7;
+            margin: 10% auto;
+            padding: 2rem;
+            border-radius: 12px;
+            width: 80%;
+            max-width: 800px;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.15);
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #E5E5EA;
+            padding-bottom: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .modal-header h2 {
+            color: #1D1D1F;
+            font-size: 1.8rem;
+        }
+
+        .close-btn {
+            color: #666;
+            font-size: 2rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: color 0.2s;
+        }
+
+        .close-btn:hover {
+            color: #1D1D1F;
+        }
+
+        .db-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .db-stat-item {
+            background: white;
+            padding: 1rem;
+            border-radius: 8px;
+            text-align: center;
+            border: 1px solid #E5E5EA;
+        }
+
+        .db-stat-item strong {
+            display: block;
+            font-size: 1.5rem;
+            color: #007AFF; /* Blueprint: 主色 */
+            margin-bottom: 0.3rem;
+        }
+
+        .db-stat-item span {
+            font-size: 0.9rem;
+            color: #666;
+        }
+
+        .db-actions {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+            flex-wrap: wrap;
+        }
+
+        #databaseList {
+            max-height: 400px;
+            overflow-y: auto;
+            background: #F8F9FA;
+            padding: 1rem;
+            border-radius: 8px;
+        }
+
+
+        @media (max-width: 768px) {
+            .filters-section {
+                grid-template-columns: 1fr;
+            }
+            
+            .products-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .header h1 {
+                font-size: 2rem;
+            }
+            
+            .container {
+                padding: 1rem;
+            }
+
+            .analysis-panel {
+                grid-template-columns: 1fr !important;
+            }
+
+            .specs-comparison-grid {
+                grid-template-columns: 150px repeat(auto-fill, minmax(120px, 1fr));
+            }
+            .modal-content {
+                width: 95%;
+                margin: 5% auto;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <h1>Mac 價格比較工具</h1>
+        <p>一站式 Mac 產品價格比較平台 - 整合多個電商網站數據</p>
+    </header>
+
+    <div class="container">
+        <!-- 數據輸入區 -->
+        <section class="input-section">
+            <h2 style="margin-bottom: 1rem; color: #1D1D1F;">新增價格來源</h2>
+            
+            <!-- URL 輸入 -->
+            <div class="input-group">
+                <label for="websiteUrl">🌐 網站 URL</label>
+                <input type="url" id="websiteUrl" class="url-input" placeholder="請輸入商品頁面網址 (如：Apple Store、PChome、momo 等)">
+            </div>
+
+            <!-- 剪貼簿自動檢測 -->
+            <div class="input-group">
+                <label>📋 剪貼簿自動檢測</label>
+                <div style="display: flex; gap: 1rem; align-items: center;">
+                    <button class="btn" onclick="toggleClipboardMonitor()" id="clipboardBtn" style="background: #5856D6;">
+                        <span>👁️</span> 啟動剪貼簿監控
+                    </button>
+                    <div style="display: flex; align-items: center; gap: 0.5rem;">
+                        <div id="clipboardStatus" style="width: 12px; height: 12px; border-radius: 50%; background: #FF3B30;"></div>
+                        <span id="clipboardText" style="font-size: 0.9rem; color: #666;">監控已停止</span>
+                    </div>
+                </div>
+                <div id="clipboardUrls" style="margin-top: 0.5rem; font-size: 0.9rem; color: #007AFF; display: none;">
+                    <strong>檢測到的網址：</strong>
+                    <div id="urlList" style="margin-top: 0.3rem;"></div>
+                </div>
+            </div>
+
+            <!-- 文件上傳 -->
+            <div class="input-group">
+                <label for="fileUpload">📁 上傳價格數據文件</label>
+                <div style="display: flex; gap: 1rem; align-items: center; flex-wrap: wrap;">
+                    <input type="file" id="fileUpload" accept=".html,.md,.txt,.csv" multiple style="display: none;" onchange="handleFileUpload(event)">
+                    <button class="btn" onclick="document.getElementById('fileUpload').click()" style="background: #34C759;">
+                        <span>📎</span> 選擇文件
+                    </button>
+                    <button class="btn" onclick="handlePasteContent()" style="background: #FF9500;">
+                        <span>📋</span> 貼上內容
+                    </button>
+                    <span id="fileName" style="color: #666; font-size: 0.9rem;">支援多檔案上傳：HTML、Markdown、TXT、CSV</span>
+                </div>
+            </div>
+
+            <!-- 批量 URL 輸入 -->
+            <div class="input-group">
+                <label for="bulkUrls">📋 批量 URL 輸入</label>
+                <textarea id="bulkUrls" class="url-input" style="height: 100px; resize: vertical;" placeholder="請輸入多個網址，每行一個：
+https://example1.com/product1
+https://example2.com/product2
+..."></textarea>
+            </div>
+
+            <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
+                <button class="btn" onclick="addUrlSource()">
+                    <span>🔍</span> 抓取單一網址
+                </button>
+                <button class="btn" onclick="processBulkUrls()" style="background: #5856D6;">
+                    <span>⚡</span> 批量處理網址
+                </button>
+                <button class="btn btn-secondary" onclick="loadSampleData()">
+                    <span>📊</span> 載入範例資料
+                </button>
+                <button class="btn" onclick="exportData()" style="background: #FF9500;">
+                    <span>📤</span> 匯出比較結果
+                </button>
+                <button class="btn" onclick="clearAllData()" style="background: #FF3B30;">
+                    <span>🗑️</span> 清空數據
+                </button>
+                <button class="btn" onclick="showDatabaseManager()" style="background: #AF52DE;">
+                    <span>💾</span> 數據庫管理
+                </button>
+            </div>
+
+            <!-- 解析說明 -->
+            <div style="margin-top: 1rem; padding: 1rem; background: linear-gradient(135deg, #E3F2FD, #F3E5F5); border-radius: 8px; border-left: 4px solid #007AFF;">
+                <h4 style="margin-bottom: 0.5rem; color: #1D1D1F;">🧠 智能解析功能</h4>
+                <div style="font-size: 0.9rem; color: #666; line-height: 1.6;">
+                    <p><strong>支援格式：</strong></p>
+                    <ul style="margin: 0.5rem 0; padding-left: 1.5rem;">
+                        <li><strong>HTML</strong> - 自動清理標籤，提取商品信息</li>
+                        <li><strong>Markdown</strong> - 解析表格和列表中的產品數據</li>
+                        <li><strong>CSV</strong> - 智能識別欄位，自動匹配價格規格</li>
+                        <li><strong>TXT</strong> - 文本分析，提取價格和規格信息</li>
+                        <li><strong>剪貼簿</strong> - 自動檢測複製的網址或內容</li>
+                    </ul>
+                    <p><strong>智能識別：</strong>產品名稱、價格 (NT$)、晶片/CPU/GPU、RAM、SSD、螢幕、狀態</p>
+                    <p><strong>自動補足：</strong>規格不完整時自動搜尋網路補充產品資訊</p>
+                    <p><strong>數據庫：</strong>所有產品數據持久化保存，支援批量管理與去重</p>
+                </div>
+            </div>
+
+            <!-- 解析狀態顯示 -->
+            <div id="parseStatus" style="margin-top: 1rem; padding: 1rem; background: #F8F9FA; border-radius: 8px; display: none;">
+                <h4 style="margin-bottom: 0.5rem; color: #1D1D1F;">📈 解析進度</h4>
+                <div id="parseProgress" style="background: #E5E5EA; height: 8px; border-radius: 4px; overflow: hidden;">
+                    <div id="progressBar" style="background: #007AFF; height: 100%; width: 0%; transition: width 0.3s ease;"></div>
+                </div>
+                <div id="parseDetails" style="margin-top: 0.5rem; font-size: 0.9rem; color: #666;"></div>
+            </div>
+        </section>
+
+        <!-- 統計概覽 -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-number" id="totalProducts">0</div>
+                <div class="stat-label">商品總數</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="averagePrice">$0</div>
+                <div class="stat-label">平均價格</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="priceRange">$0</div>
+                <div class="stat-label">價差範圍</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="sourcesCount">0</div>
+                <div class="stat-label">價格來源</div>
+            </div>
+        </div>
+
+        <!-- 篩選器與結果區 -->
+        <div class="filters-section">
+            <!-- 篩選面板 -->
+            <aside class="filters-panel">
+                <h2 style="margin-bottom: 1rem; color: #1D1D1F;">篩選條件</h2>
+                
+                <div class="filter-group">
+                    <h3>📱 產品系列</h3>
+                    <div class="filter-options">
+                        <div class="filter-option">
+                            <input type="checkbox" id="macbook-air" checked>
+                            <label for="macbook-air">MacBook Air</label>
+                        </div>
+                        <div class="filter-option">
+                            <input type="checkbox" id="macbook-pro" checked>
+                            <label for="macbook-pro">MacBook Pro</label>
+                        </div>
+                        <div class="filter-option">
+                            <input type="checkbox" id="imac" checked>
+                            <label for="imac">iMac</label>
+                        </div>
+                        <div class="filter-option">
+                            <input type="checkbox" id="mac-mini" checked>
+                            <label for="mac-mini">Mac mini</label>
+                        </div>
+                        <div class="filter-option">
+                            <input type="checkbox" id="mac-studio" checked>
+                            <label for="mac-studio">Mac Studio</label>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="filter-group">
+                    <h3>💾 記憶體</h3>
+                    <div class="filter-options">
+                        <div class="filter-option">
+                            <input type="checkbox" id="ram-8gb" checked>
+                            <label for="ram-8gb">8GB</label>
+                        </div>
+                        <div class="filter-option">
+                            <input type="checkbox" id="ram-16gb" checked>
+                            <label for="ram-16gb">16GB</label>
+                        </div>
+                        <div class="filter-option">
+                            <input type="checkbox" id="ram-32gb" checked>
+                            <label for="ram-32gb">32GB</label>
+                        </div>
+                        <div class="filter-option">
+                            <input type="checkbox" id="ram-64gb" checked>
+                            <label for="ram-64gb">64GB+</label>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="filter-group">
+                    <h3>💿 儲存容量</h3>
+                    <div class="filter-options">
+                        <div class="filter-option">
+                            <input type="checkbox" id="storage-256gb" checked>
+                            <label for="storage-256gb">256GB</label>
+                        </div>
+                        <div class="filter-option">
+                            <input type="checkbox" id="storage-512gb" checked>
+                            <label for="storage-512gb">512GB</label>
+                        </div>
+                        <div class="filter-option">
+                            <input type="checkbox" id="storage-1tb" checked>
+                            <label for="storage-1tb">1TB</label>
+                        </div>
+                        <div class="filter-option">
+                            <input type="checkbox" id="storage-2tb" checked>
+                            <label for="storage-2tb">2TB+</label>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="filter-group">
+                    <h3>🔧 商品狀況</h3>
+                    <div class="filter-options">
+                        <div class="filter-option">
+                            <input type="checkbox" id="condition-new" checked>
+                            <label for="condition-new">全新</label>
+                        </div>
+                        <div class="filter-option">
+                            <input type="checkbox" id="condition-refurbished" checked>
+                            <label for="condition-refurbished">官方整新品</label>
+                        </div>
+                        <div class="filter-option">
+                            <input type="checkbox" id="condition-used-a" checked>
+                            <label for="condition-used-a">二手 A 級</label>
+                        </div>
+                        <div class="filter-option">
+                            <input type="checkbox" id="condition-used-b" checked>
+                            <label for="condition-used-b">二手 B 級</label>
+                        </div>
+                        <div class="filter-option">
+                            <input type="checkbox" id="condition-used-c">
+                            <label for="condition-used-c">二手 C 級</label>
+                        </div>
+                        <div class="filter-option">
+                            <input type="checkbox" id="condition-student" checked>
+                            <label for="condition-student">教育價</label>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="filter-group">
+                    <h3>💰 價格範圍 (TWD)</h3>
+                    <div class="price-range">
+                        <input type="number" class="price-input" id="minPrice" placeholder="最低價" min="0">
+                        <span>-</span>
+                        <input type="number" class="price-input" id="maxPrice" placeholder="最高價" min="0">
+                    </div>
+                </div>
+
+                <button class="btn" onclick="applyFilters()" style="width: 100%; margin-top: 1rem;">
+                    套用篩選
+                </button>
+            </aside>
+
+            <!-- 結果顯示區 -->
+            <main class="results-section">
+                <div class="results-header">
+                    <h2 style="color: #1D1D1F;">比較結果</h2>
+                    <div class="view-toggle">
+                        <button class="view-btn active" onclick="switchView('grid')">卡片檢視</button>
+                        <button class="view-btn" onclick="switchView('table')">表格檢視</button>
+                        <button class="view-btn" onclick="switchView('chart')">圖表檢視</button>
+                    </div>
+                </div>
+
+                <div id="loading" class="loading" style="display: none;">
+                    <div class="loading-spinner"></div>
+                    <p>正在抓取商品資料...</p>
+                </div>
+
+                <div id="products-container" class="products-grid">
+                    <!-- 商品卡片將在這裡動態生成 -->
+                </div>
+            </main>
+        </div>
+
+        <!-- 價格趨勢圖表區 -->
+        <section class="comparison-section">
+            <h2 style="margin-bottom: 1rem; color: #1D1D1F;">📈 價格分析與規格差異</h2>
+            
+            <!-- 分析選項卡 -->
+            <div style="display: flex; gap: 0.5rem; margin-bottom: 1.5rem; border-bottom: 2px solid #F2F2F7;">
+                <button class="analysis-tab active" onclick="switchAnalysisTab('price')" data-tab="price">
+                    💰 價差分析
+                </button>
+                <button class="analysis-tab" onclick="switchAnalysisTab('specs')" data-tab="specs">
+                    🔧 規格差異
+                </button>
+                <button class="analysis-tab" onclick="switchAnalysisTab('trends')" data-tab="trends">
+                    📊 價格趨勢
+                </button>
+                <button class="analysis-tab" onclick="switchAnalysisTab('ai')" data-tab="ai">
+                    🤖 AI 分析
+                </button>
+            </div>
+
+            <!-- 價差分析面板 -->
+            <div id="priceAnalysisPanel" class="analysis-panel">
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;">
+                    <div>
+                        <h3 style="margin-bottom: 1rem;">💸 價差統計</h3>
+                        <div id="priceDifferenceStats" style="background: #F8F9FA; padding: 1rem; border-radius: 8px;">
+                            <!-- 價差統計將在這裡顯示 -->
+                        </div>
+                    </div>
+                    <div>
+                        <h3 style="margin-bottom: 1rem;">🏆 最佳價格推薦</h3>
+                        <div id="bestPriceRecommendations" style="background: #F8F9FA; padding: 1rem; border-radius: 8px;">
+                            <!-- 價格推薦將在這裡顯示 -->
+                        </div>
+                    </div>
+                </div>
+                <div class="chart-container" style="margin-top: 1.5rem;">
+                    <canvas id="priceComparisonChart"></canvas>
+                </div>
+            </div>
+
+            <!-- 規格差異面板 -->
+            <div id="specsAnalysisPanel" class="analysis-panel" style="display: none;">
+                <div style="margin-bottom: 1.5rem;">
+                    <h3 style="margin-bottom: 1rem;">⚙️ 規格配置分析</h3>
+                    <div id="specsComparisonTable" style="background: #F8F9FA; padding: 1rem; border-radius: 8px;">
+                        <!-- 規格比較表格將在這裡顯示 -->
+                    </div>
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;">
+                    <div class="chart-container">
+                        <canvas id="specsDistributionChart"></canvas>
+                    </div>
+                    <div class="chart-container">
+                        <canvas id="performanceScoreChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 價格趨勢面板 -->
+            <div id="trendsAnalysisPanel" class="analysis-panel" style="display: none;">
+                <div style="margin-bottom: 1.5rem;">
+                    <h3 style="margin-bottom: 1rem;">📈 價格趨勢預測</h3>
+                    <div style="display: flex; gap: 1rem; margin-bottom: 1rem;">
+                        <button class="btn" onclick="generateTrendForecast()" style="background: #5856D6;">
+                            🔮 生成趨勢預測
+                        </button>
+                        <button class="btn" onclick="analyzePricePattern()" style="background: #AF52DE;">
+                            📊 分析價格模式
+                        </button>
+                         <button class="btn" onclick="showPriceDistribution()" style="background: #34C759;">
+                            📈 價格分布圖
+                        </button>
+                    </div>
+                </div>
+                <div class="chart-container">
+                    <canvas id="trendAnalysisChart"></canvas>
+                </div>
+                 <div id="pricePatternResults" style="margin-top: 1.5rem; display: none;">
+                    <!-- 價格模式分析結果 -->
+                </div>
+            </div>
+
+            <!-- AI 分析面板 -->
+            <div id="aiAnalysisPanel" class="analysis-panel" style="display: none;">
+                <div style="margin-bottom: 1.5rem;">
+                    <h3 style="margin-bottom: 1rem;">🤖 AI 分析 Prompt 生成器</h3>
+                    <div style="display: flex; gap: 1rem; margin-bottom: 1rem; flex-wrap: wrap;">
+                        <button class="btn" onclick="generatePriceAnalysisPrompt()" style="background: #007AFF;">
+                            💰 價格分析 Prompt
+                        </button>
+                        <button class="btn" onclick="generateSpecsAnalysisPrompt()" style="background: #34C759;">
+                            🔧 規格分析 Prompt
+                        </button>
+                        <button class="btn" onclick="generatePurchaseAdvicePrompt()" style="background: #FF9500;">
+                            🛒 購買建議 Prompt
+                        </button>
+                        <button class="btn" onclick="generateCompetitiveAnalysisPrompt()" style="background: #5856D6;">
+                            🏆 競爭分析 Prompt
+                        </button>
+                    </div>
+                </div>
+                <div id="aiPromptOutput" style="background: #F8F9FA; padding: 1.5rem; border-radius: 8px; min-height: 300px; border: 2px dashed #E5E5EA;">
+                    <p style="text-align: center; color: #666; margin: 0;">選擇上方按鈕生成相應的 AI 分析 Prompt</p>
+                </div>
+                <div style="margin-top: 1rem; text-align: center;">
+                    <button class="btn" onclick="copyPromptToClipboard()" style="background: #30D158;" disabled id="copyPromptBtn">
+                        📋 複製 Prompt 到剪貼簿
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- Database Management Modal -->
+        <div id="databaseModal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2>💾 數據庫管理</h2>
+                    <span class="close-btn" onclick="closeDatabaseManager()">&times;</span>
+                </div>
+                <div class="db-stats">
+                    <div class="db-stat-item">
+                        <strong id="dbTotalCount">0</strong>
+                        <span>總產品數</span>
+                    </div>
+                    <div class="db-stat-item">
+                        <strong id="dbSourceCount">0</strong>
+                        <span>來源數量</span>
+                    </div>
+                    <div class="db-stat-item">
+                        <strong id="dbLastUpdate">無</strong>
+                        <span>最後更新</span>
+                    </div>
+                </div>
+                <div class="db-actions">
+                    <button class="btn" onclick="removeDuplicates()" style="background: #FF9500;">✨ 去除重複</button> <!-- Blueprint: 強調色 -->
+                    <button class="btn" onclick="refreshAllData()" style="background: #34C759;">🔄 重新整理</button> <!-- Blueprint: 次要色 -->
+                    <button class="btn" onclick="exportDatabase()" style="background: #007AFF;">📤 匯出數據</button> <!-- Blueprint: 主色 -->
+                    <button class="btn" onclick="importDatabase()" style="background: #5856D6;">📥 匯入數據</button> <!-- Purple for distinct action -->
+                    <button class="btn" onclick="clearDatabase()" style="background: #FF3B30;">🗑️ 清空數據庫</button> <!-- Red for destructive action -->
+                </div>
+                <div id="databaseList">
+                    <!-- Database items will be listed here -->
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        // 全域變數
+        let allProducts = [];
+        let filteredProducts = [];
+        let currentView = 'grid';
+        // let priceChart = null; // Removed as it's defined locally in renderChart
+        let parseResults = [];
+        // let currentParseIndex = 0; // Seems unused
+        let productDatabase = new Map(); // 本地數據庫
+        let clipboardUrls = new Set(); // 剪貼簿 URL 追蹤
+        let lastClipboardCheck = '';
+        let currentPrompt = ''; // For AI prompts
+
+        // === 數據庫管理面板功能 ===
+        function showDatabaseManager() {
+            updateDatabaseStats();
+            document.getElementById('databaseModal').style.display = 'block';
+            loadDatabaseList();
+        }
+
+        function closeDatabaseManager() {
+            document.getElementById('databaseModal').style.display = 'none';
+        }
+
+        function updateDatabaseStats() {
+            const totalCount = productDatabase.size;
+            const sources = new Set(Array.from(productDatabase.values()).map(p => p.source)).size;
+            const lastUpdate = totalCount > 0 ? 
+                new Date(Math.max(...Array.from(productDatabase.values()).map(p => new Date(p.lastUpdated)))).toLocaleString('zh-TW') : 
+                '無';
+
+            document.getElementById('dbTotalCount').textContent = totalCount;
+            document.getElementById('dbSourceCount').textContent = sources;
+            document.getElementById('dbLastUpdate').textContent = lastUpdate;
+        }
+
+        function loadDatabaseList() {
+            const products = Array.from(productDatabase.values());
+            const listHtml = products.map(product => `
+                <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.8rem; margin-bottom: 0.5rem; background: white; border-radius: 6px; border: 1px solid #E5E5EA;">
+                    <div>
+                        <strong>${product.name}</strong><br>
+                        <small style="color: #666;">${product.price.toLocaleString()} - ${product.source}</small>
+                    </div>
+                    <button onclick="removeFromDatabase('${product.dbKey}')" style="background: #FF3B30; color: white; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer;">
+                        刪除
+                    </button>
+                </div>
+            `).join('');
+
+            document.getElementById('databaseList').innerHTML = listHtml || '<p style="text-align: center; color: #666;">數據庫為空</p>';
+        }
+        
+        function readFileContent(file) { // Added from external snippets
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = (e) => resolve(e.target.result);
+                reader.onerror = (e) => reject(e);
+                reader.readAsText(file, 'UTF-8');
+            });
+        }
+
+        function removeFromDatabase(dbKey) {
+            if (confirm('確定要刪除這個產品嗎？')) {
+                productDatabase.delete(dbKey);
+                persistDatabase();
+                syncDatabaseToProducts();
+                loadDatabaseList();
+                updateDatabaseStats();
+                applyFilters(); // Ensure UI updates after removal
+            }
+        }
+
+        function removeDuplicates() {
+            const seen = new Set();
+            const toRemove = [];
+            const tempProducts = Array.from(productDatabase.values()); // Create a temporary array
+
+            for (const product of tempProducts) { // Iterate over the temporary array
+                const signature = `${product.name}_${product.price}_${product.memory}_${product.storage}`;
+                if (seen.has(signature)) {
+                    toRemove.push(product.dbKey);
+                } else {
+                    seen.add(signature);
+                }
+            }
+        
+            toRemove.forEach(key => productDatabase.delete(key));
+            
+            if (toRemove.length > 0) {
+                persistDatabase();
+                syncDatabaseToProducts();
+                loadDatabaseList();
+                updateDatabaseStats();
+                applyFilters();
+                alert(`已移除 ${toRemove.length} 個重複產品。`);
+            } else {
+                alert('沒有發現重複產品。');
+            }
+        }
+
+        function refreshAllData() {
+            showParseStatus('正在重新整理所有產品數據...');
+            
+            setTimeout(() => {
+                Array.from(productDatabase.values()).forEach(product => {
+                    product.lastUpdated = new Date();
+                    const priceVariation = (Math.random() - 0.5) * 0.02; // ±1%
+                    product.price = Math.round(product.price * (1 + priceVariation));
+                });
+                
+                persistDatabase();
+                syncDatabaseToProducts();
+                loadDatabaseList();
+                updateDatabaseStats();
+                applyFilters();
+                hideParseStatus();
+                alert('所有產品數據已重新整理完成。');
+            }, 2000);
+        }
+
+        function clearDatabase() {
+            if (confirm('確定要清空整個數據庫嗎？此操作無法恢復。')) {
+                productDatabase.clear();
+                localStorage.removeItem('macPriceDatabase');
+                allProducts = [];
+                filteredProducts = [];
+                loadDatabaseList();
+                updateDatabaseStats();
+                renderProducts();
+                updateStats();
+                // renderChart(); // renderChart is called by applyFilters or renderProducts
+                applyFilters(); // This will also call renderChart
+                alert('數據庫已清空。');
+            }
+        }
+        
+        function exportDatabase() {
+            const data = Array.from(productDatabase.values());
+            const jsonData = JSON.stringify(data, null, 2);
+            const blob = new Blob([jsonData], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `mac_price_database_${new Date().toISOString().split('T')[0]}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        function importDatabase() {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = '.json';
+            input.onchange = async (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+
+                try {
+                    const content = await readFileContent(file); // Ensure readFileContent is defined
+                    const importedData = JSON.parse(content);
+                    
+                    if (Array.isArray(importedData)) {
+                        importedData.forEach(product => {
+                            if (product.id && product.name && product.price) { // Basic validation
+                                const key = product.dbKey || `${product.name}_${product.source}_${product.price}`;
+                                productDatabase.set(key, {
+                                    ...product,
+                                    dbKey: key,
+                                    lastUpdated: new Date(product.lastUpdated || Date.now()) // Ensure lastUpdated is a Date
+                                });
+                            }
+                        });
+                        
+                        persistDatabase();
+                        syncDatabaseToProducts();
+                        loadDatabaseList();
+                        updateDatabaseStats();
+                        applyFilters();
+                        alert(`成功匯入 ${importedData.length} 個產品到數據庫。`);
+                    } else {
+                        alert('匯入文件格式錯誤。');
+                    }
+                } catch (error) {
+                    console.error('匯入失敗:', error);
+                    alert('匯入失敗，請檢查文件格式。');
+                }
+            };
+            input.click();
+        }
+
+        // === AI Prompt 生成功能 ===
+        function generatePriceAnalysisPrompt() {
+            const priceData = compilePriceAnalysisData();
+            currentPrompt = `# Mac 產品價格分析請求
+
+## 分析目標
+請基於以下 Mac 產品價格數據，提供專業的價格分析和購買建議。
+
+## 產品數據
+${priceData.productSummary}
+
+## 價格統計
+- 價格範圍: ${priceData.minPrice.toLocaleString()} - ${priceData.maxPrice.toLocaleString()}
+- 平均價格: ${priceData.avgPrice.toLocaleString()}
+- 最大價差: ${priceData.priceDiff.toLocaleString()}
+- 價格變異數: ±${priceData.variance.toLocaleString()}
+
+## 來源分布
+${priceData.sourceDistribution}
+
+## 狀況分布
+${priceData.conditionDistribution}
+
+## 分析要求
+1. **價格合理性分析**: 評估各產品的價格是否合理
+2. **性價比排名**: 按照性價比對產品進行排名
+3. **購買時機建議**: 根據價格趨勢建議最佳購買時機
+4. **風險評估**: 不同價格區間的產品風險分析
+5. **省錢策略**: 提供具體的省錢購買策略
+
+## 輸出格式
+請以結構化方式提供分析結果，包含具體數據支撐和實用建議。`;
+
+            displayPrompt(currentPrompt);
+        }
+
+        function generateSpecsAnalysisPrompt() {
+            const specsData = compileSpecsAnalysisData();
+            currentPrompt = `# Mac 產品規格差異分析請求
+
+## 分析目標
+請基於以下 Mac 產品規格數據，提供詳細的技術規格分析和選擇建議。
+
+## 產品規格對比
+${specsData.specsComparison}
+
+## 規格分布統計
+${specsData.specsDistribution}
+
+## 性能評分
+${specsData.performanceScores}
+
+## 使用場景匹配
+${specsData.useCaseData}
+
+## 分析要求
+1. **規格差異解析**: 詳細說明各規格差異對實際使用的影響
+2. **性能瓶頸分析**: 識別各配置的潛在性能瓶頸
+3. **升級價值評估**: 分析記憶體、儲存空間升級的性價比
+4. **使用場景推薦**: 根據不同使用需求推薦最適合的配置
+5. **未來擴展性**: 評估各配置的未來擴展潛力
+
+## 技術深度
+請提供專業級的技術分析，包含具體的性能數據和基準測試參考。`;
+
+            displayPrompt(currentPrompt);
+        }
+
+        function generatePurchaseAdvicePrompt() {
+            const purchaseData = compilePurchaseAdviceData();
+            currentPrompt = `# Mac 購買決策分析請求
+
+## 分析目標
+基於收集的市場數據，為用戶提供個性化的 Mac 購買建議和決策支援。
+
+## 市場現況
+${purchaseData.marketOverview}
+
+## 產品推薦清單
+${purchaseData.recommendations}
+
+## 價格趨勢預測
+${purchaseData.priceTrends}
+
+## 庫存狀況
+${purchaseData.availability}
+
+## 決策因素分析
+${purchaseData.decisionFactors}
+
+## 分析要求
+1. **最佳購買時機**: 基於價格趨勢和庫存狀況的時機建議
+2. **預算優化策略**: 不同預算範圍的最佳配置組合
+3. **風險與機會**: 購買決策中的風險因素和機會點
+4. **替代方案**: 提供多種可行的替代購買方案
+5. **長期價值評估**: 考慮折舊和升級週期的長期價值分析
+
+## 個人化建議
+請提供可操作的具體建議，包含購買步驟和注意事項。`;
+
+            displayPrompt(currentPrompt);
+        }
+
+        function generateCompetitiveAnalysisPrompt() {
+            const competitiveData = compileCompetitiveAnalysisData();
+            currentPrompt = `# Mac 市場競爭分析請求
+
+## 分析目標
+提供 Mac 產品在不同銷售渠道間的競爭態勢分析和市場洞察。
+
+## 渠道競爭分析
+${competitiveData.channelAnalysis}
+
+## 產品線競爭力
+${competitiveData.productLineAnalysis}
+
+## 價格策略分析
+${competitiveData.pricingStrategy}
+
+## 市場份額估算
+${competitiveData.marketShare}
+
+## 消費者偏好趨勢
+${competitiveData.consumerTrends}
+
+## 分析要求
+1. **競爭優勢識別**: 各銷售渠道的競爭優勢和劣勢
+2. **市場定位分析**: 不同產品線的市場定位策略
+3. **價格競爭力**: 價格競爭力和差異化策略分析
+4. **消費者決策因素**: 影響消費者選擇的關鍵因素
+5. **市場機會點**: 識別市場空白和機會點
+
+## 商業洞察
+請提供具有商業價值的深度洞察和策略建議。`;
+
+            displayPrompt(currentPrompt);
+        }
+        
+        function compilePriceAnalysisData() {
+            if (filteredProducts.length === 0) { // Handle empty filteredProducts
+                return {
+                    productSummary: "無產品數據",
+                    minPrice: 0, maxPrice: 0, avgPrice: 0, priceDiff: 0, variance: 0,
+                    sourceDistribution: "無來源數據", conditionDistribution: "無狀況數據"
+                };
+            }
+            const prices = filteredProducts.map(p => p.price);
+            const minPrice = Math.min(...prices);
+            const maxPrice = Math.max(...prices);
+            const avgPrice = Math.round(prices.reduce((a, b) => a + b, 0) / prices.length);
+            const variance = prices.length > 1 ? Math.round(Math.sqrt(prices.reduce((sum, price) => sum + Math.pow(price - avgPrice, 2), 0) / (prices.length -1 ))) : 0; // Sample variance
+
+            const productSummary = filteredProducts.map((p, i) => 
+                `${i + 1}. ${p.name} - ${p.price.toLocaleString()} (${p.condition}) - ${p.source}`
+            ).join('\n');
+
+            const sourceCount = {};
+            filteredProducts.forEach(p => {
+                sourceCount[p.source] = (sourceCount[p.source] || 0) + 1;
+            });
+            const sourceDistribution = Object.entries(sourceCount)
+                .map(([source, count]) => `- ${source}: ${count} 個產品`)
+                .join('\n') || "無來源數據";
+
+            const conditionCount = {};
+            filteredProducts.forEach(p => {
+                conditionCount[p.condition] = (conditionCount[p.condition] || 0) + 1;
+            });
+            const conditionDistribution = Object.entries(conditionCount)
+                .map(([condition, count]) => `- ${condition}: ${count} 個產品`)
+                .join('\n') || "無狀況數據";
+
+            return {
+                productSummary, minPrice, maxPrice, avgPrice,
+                priceDiff: maxPrice - minPrice, variance,
+                sourceDistribution, conditionDistribution
+            };
+        }
+
+        function compileSpecsAnalysisData() {
+            if (filteredProducts.length === 0) {
+                 return {
+                    specsComparison: "無產品數據", specsDistribution: "無規格數據",
+                    performanceScores: "無評分數據", useCaseData: "無使用場景數據"
+                };
+            }
+            const uniqueProducts = getUniqueProductsByModel();
+            
+            const specsComparison = uniqueProducts.map((p, i) => `
+${i + 1}. ${p.name}
+   - 處理器: ${p.processor}
+   - 記憶體: ${(p.memory || "").replace('GB', '')} GB
+   - 儲存: ${(p.storage || "").replace(/GB|TB/g, '')} ${(p.storage || "").includes("TB") ? "TB" : "GB"}
+   - 螢幕: ${(p.screen || "").replace('吋', '')} 吋
+   - 價格: ${p.price.toLocaleString()}
+   - 狀況: ${p.condition}`).join('\n');
+
+            const memoryDist = getDistribution(filteredProducts, 'memory');
+            const storageDist = getDistribution(filteredProducts, 'storage');
+            const processorDist = getDistribution(filteredProducts, 'processor');
+
+            const specsDistribution = `
+記憶體分布:
+${Object.entries(memoryDist).map(([key, value]) => `- ${key}: ${value} 個產品`).join('\n')}
+
+儲存分布:
+${Object.entries(storageDist).map(([key, value]) => `- ${key}: ${value} 個產品`).join('\n')}
+
+處理器分布:
+${Object.entries(processorDist).map(([key, value]) => `- ${key}: ${value} 個產品`).join('\n')}`;
+
+            const performanceScores = uniqueProducts.map(p => 
+                `- ${p.name}: ${calculateValueScore(p).toFixed(2)} 分`
+            ).join('\n');
+
+            const useCaseData = `
+輕度使用 (文書、網頁): 8GB RAM + 256GB SSD
+中度使用 (開發、設計): 16GB RAM + 512GB SSD  
+重度使用 (影片編輯): 32GB+ RAM + 1TB+ SSD
+專業工作站: 64GB+ RAM + 2TB+ SSD`;
+
+            return { specsComparison, specsDistribution, performanceScores, useCaseData };
+        }
+
+        function compilePurchaseAdviceData() {
+             if (filteredProducts.length === 0) {
+                return {
+                    marketOverview: "無市場數據", recommendations: "無推薦數據",
+                    priceTrends: "無價格趨勢數據", availability: "無庫存數據", decisionFactors: "無決策因素數據"
+                };
+            }
+            const sortedByPrice = [...filteredProducts].sort((a, b) => a.price - b.price);
+            const bestValue = findBestValueProduct();
+
+            const marketOverview = `
+總產品數: ${filteredProducts.length}
+價格範圍: ${sortedByPrice[0].price.toLocaleString()} - ${sortedByPrice[sortedByPrice.length-1].price.toLocaleString()}
+平均價格: ${Math.round(filteredProducts.reduce((sum, p) => sum + p.price, 0) / filteredProducts.length).toLocaleString()}
+主要銷售渠道: ${[...new Set(filteredProducts.map(p => p.source))].join(', ')}`;
+
+            const recommendations = `
+最佳性價比: ${bestValue.name} - ${bestValue.price.toLocaleString()} (${bestValue.source})
+預算首選: ${sortedByPrice[0].name} - ${sortedByPrice[0].price.toLocaleString()} (${sortedByPrice[0].source})
+高端選擇: ${sortedByPrice[sortedByPrice.length-1].name} - ${sortedByPrice[sortedByPrice.length-1].price.toLocaleString()} (${sortedByPrice[sortedByPrice.length-1].source})`;
+
+            const priceTrends = `
+預測趨勢: 基於當前數據，預期未來 3-6 個月價格可能下降 2-5%
+季節性因素: 通常在新品發布前後價格波動較大
+庫存影響: 熱門配置可能面臨缺貨，影響價格穩定性`;
+
+            const availability = filteredProducts.map(p => 
+                `${p.name}: ${p.availability || '未知'} (${p.source})` // Added fallback for availability
+            ).join('\n');
+
+            const decisionFactors = `
+主要考量因素:
+1. 預算限制: ${Math.round(filteredProducts.reduce((sum, p) => sum + p.price, 0) / filteredProducts.length / 1000) * 1000} 為主流價位
+2. 使用需求: 不同規格適合不同使用場景
+3. 品質保證: 全新vs整新品vs二手的風險評估
+4. 售後服務: 不同渠道的保固和服務差異`;
+
+            return { marketOverview, recommendations, priceTrends, availability, decisionFactors };
+        }
+
+        function compileCompetitiveAnalysisData() {
+            if (filteredProducts.length === 0) {
+                return {
+                    channelAnalysis: "無渠道數據", productLineAnalysis: "無產品線數據",
+                    pricingStrategy: "無價格策略數據", marketShare: "無市場份額數據", consumerTrends: "無消費者趨勢數據"
+                };
+            }
+            const sourceAnalysis = {};
+            filteredProducts.forEach(p => {
+                if (!sourceAnalysis[p.source]) {
+                    sourceAnalysis[p.source] = {
+                        products: [],
+                        avgPrice: 0,
+                        conditions: new Set()
+                    };
+                }
+                sourceAnalysis[p.source].products.push(p);
+                sourceAnalysis[p.source].conditions.add(p.condition);
+            });
+
+            Object.keys(sourceAnalysis).forEach(source => {
+                const products = sourceAnalysis[source].products;
+                if (products.length > 0) { // Avoid division by zero
+                    sourceAnalysis[source].avgPrice = Math.round(
+                        products.reduce((sum, p) => sum + p.price, 0) / products.length
+                    );
+                } else {
+                    sourceAnalysis[source].avgPrice = 0;
+                }
+            });
+
+            const channelAnalysis = Object.entries(sourceAnalysis).map(([source, data]) => `
+${source}:
+- 產品數量: ${data.products.length}
+- 平均價格: ${data.avgPrice.toLocaleString()}
+- 商品狀況: ${Array.from(data.conditions).join(', ')}
+- 價格競爭力: ${data.avgPrice < 40000 ? '高' : data.avgPrice < 60000 ? '中' : '低'}`).join('\n');
+
+            const productLineAnalysis = `
+MacBook Air: ${filteredProducts.filter(p => p.model === 'MacBook Air').length} 個產品
+MacBook Pro: ${filteredProducts.filter(p => p.model === 'MacBook Pro').length} 個產品
+iMac: ${filteredProducts.filter(p => p.model === 'iMac').length} 個產品
+Mac mini: ${filteredProducts.filter(p => p.model === 'Mac mini').length} 個產品
+其他: ${filteredProducts.filter(p => !['MacBook Air', 'MacBook Pro', 'iMac', 'Mac mini'].includes(p.model)).length} 個產品`;
+
+            const pricingStrategy = `
+價格策略分析:
+- 蘋果官方: 統一定價，提供教育優惠
+- 電商平台: 價格競爭激烈，常有促銷活動
+- 二手市場: 價格差異大，品質參差不齊
+- 整新品: 介於全新和二手之間的定位`;
+
+            const marketShare = Object.entries(sourceAnalysis).map(([source, data]) => {
+                const share = filteredProducts.length > 0 ? (data.products.length / filteredProducts.length * 100).toFixed(1) : 0;
+                return `${source}: ${share}%`;
+            }).join('\n');
+
+            const consumerTrends = `
+消費者偏好趨勢:
+1. 性價比導向: 越來越注重規格與價格的平衡
+2. 品質保證: 傾向選擇有保固的渠道
+3. 配置升級: 16GB記憶體和512GB儲存成為主流需求
+4. 環保意識: 整新品和二手產品接受度提升`;
+
+            return { channelAnalysis, productLineAnalysis, pricingStrategy, marketShare, consumerTrends };
+        }
+
+        function getDistribution(products, field) {
+            const distribution = {};
+            products.forEach(product => {
+                const value = product[field];
+                distribution[value] = (distribution[value] || 0) + 1;
+            });
+            return distribution;
+        }
+
+        function displayPrompt(prompt) {
+            document.getElementById('aiPromptOutput').innerHTML = `
+                <div class="prompt-section">
+                    <pre>${prompt}</pre> <!-- Use <pre> for better formatting -->
+                </div>
+            `;
+            document.getElementById('copyPromptBtn').disabled = false;
+        }
+
+
+        // 範例資料
+        const sampleData = [
+            {
+                id: 1,
+                name: 'MacBook Air M2 13吋',
+                model: 'MacBook Air',
+                processor: 'Apple M2',
+                memory: '8GB',
+                storage: '256GB',
+                screen: '13.6吋',
+                condition: 'new',
+                price: 35900,
+                originalPrice: 35900,
+                source: 'Apple Store Taiwan',
+                url: 'https://apple.com/tw',
+                availability: '現貨',
+                warranty: '1年保固',
+                lastUpdated: new Date()
+            },
+            {
+                id: 2,
+                name: 'MacBook Air M2 13吋',
+                model: 'MacBook Air',
+                processor: 'Apple M2',
+                memory: '8GB',
+                storage: '256GB',
+                screen: '13.6吋',
+                condition: 'refurbished',
+                price: 31900,
+                originalPrice: 35900,
+                source: 'Apple 官方整新品',
+                url: 'https://apple.com/tw/shop/refurbished',
+                availability: '現貨',
+                warranty: '1年保固',
+                lastUpdated: new Date()
+            },
+            {
+                id: 3,
+                name: 'MacBook Pro M3 14吋',
+                model: 'MacBook Pro',
+                processor: 'Apple M3',
+                memory: '8GB',
+                storage: '512GB',
+                screen: '14.2吋',
+                condition: 'new',
+                price: 61900,
+                originalPrice: 61900,
+                source: 'PChome 24h',
+                url: 'https://24h.pchome.com.tw',
+                availability: '現貨',
+                warranty: '1年保固',
+                lastUpdated: new Date()
+            },
+            {
+                id: 4,
+                name: 'MacBook Pro M3 14吋',
+                model: 'MacBook Pro',
+                processor: 'Apple M3',
+                memory: '8GB',
+                storage: '512GB',
+                screen: '14.2吋',
+                condition: 'student',
+                price: 58800,
+                originalPrice: 61900,
+                source: 'Apple 教育價',
+                url: 'https://apple.com/tw/shop/education',
+                availability: '現貨',
+                warranty: '1年保固',
+                lastUpdated: new Date()
+            },
+            {
+                id: 5,
+                name: 'iMac M3 24吋',
+                model: 'iMac',
+                processor: 'Apple M3',
+                memory: '8GB',
+                storage: '256GB',
+                screen: '24吋 4.5K',
+                condition: 'new',
+                price: 48900,
+                originalPrice: 48900,
+                source: 'momo購物網',
+                url: 'https://momo.com.tw',
+                availability: '現貨',
+                warranty: '1年保固',
+                lastUpdated: new Date()
+            },
+            {
+                id: 6,
+                name: 'MacBook Air M2 13吋',
+                model: 'MacBook Air',
+                processor: 'Apple M2',
+                memory: '8GB',
+                storage: '256GB',
+                screen: '13.6吋',
+                condition: 'used-a',
+                price: 28900,
+                originalPrice: 35900,
+                source: '二手商城',
+                url: 'https://example-used.com',
+                availability: '現貨',
+                warranty: '3個月保固',
+                lastUpdated: new Date()
+            },
+            {
+                id: 7,
+                name: 'Mac mini M2',
+                model: 'Mac mini',
+                processor: 'Apple M2',
+                memory: '8GB',
+                storage: '256GB',
+                screen: '無',
+                condition: 'new',
+                price: 19900,
+                originalPrice: 19900,
+                source: '燦坤線上',
+                url: 'https://tkec.com.tw',
+                availability: '現貨',
+                warranty: '1年保固',
+                lastUpdated: new Date()
+            },
+            {
+                id: 8,
+                name: 'MacBook Pro M3 Pro 14吋',
+                model: 'MacBook Pro',
+                processor: 'Apple M3 Pro',
+                memory: '16GB',
+                storage: '512GB',
+                screen: '14.2吋',
+                condition: 'new',
+                price: 78900,
+                originalPrice: 78900,
+                source: '順發電腦',
+                url: 'https://sunfar.com.tw',
+                availability: '預購',
+                warranty: '1年保固',
+                lastUpdated: new Date()
+            }
+        ];
+
+        // 初始化
+        function initializeApp() {
+            loadFromDatabase(); // Load from DB first
+            setupEventListeners();
+            if (productDatabase.size === 0) { // Only load sample if DB is empty
+                loadSampleData();
+            } else {
+                syncDatabaseToProducts(); // Sync DB to working arrays
+                applyFilters(); // Apply filters which also renders products, stats, and chart
+            }
+            initClipboardMonitor();
+            // Initialize analysis panels after a short delay to ensure DOM is ready
+            setTimeout(() => {
+                switchAnalysisTab('price'); // Default to price analysis tab
+            }, 100);
+        }
+
+
+        // 設定事件監聽器
+        function setupEventListeners() {
+            // 篩選器變更事件
+            document.querySelectorAll('.filters-panel input[type="checkbox"], .filters-panel input[type="number"]').forEach(input => {
+                input.addEventListener('change', applyFilters);
+            });
+        }
+
+        // 載入範例資料
+        function loadSampleData() {
+            showParseStatus('正在載入範例數據...');
+            
+            setTimeout(() => {
+                updateParseProgress(30, '正在生成多樣化商品數據...');
+                
+                setTimeout(() => {
+                    updateParseProgress(60, '正在模擬文件解析結果...');
+                    
+                    setTimeout(() => {
+                        updateParseProgress(90, '正在整理數據結構...');
+                        
+                        setTimeout(() => {
+                            // Clear existing data before loading sample data
+                            // productDatabase.clear(); // Optionally clear DB if sample data should always overwrite
+                            
+                            sampleData.forEach(product => {
+                                saveToDatabase(product); // Save sample data to DB
+                            });
+                            persistDatabase(); // Persist DB changes
+                            syncDatabaseToProducts(); // Sync DB to working arrays
+                                                        
+                            // 添加一些文件解析的模擬數據
+                            const parseSimulationData = [
+                                {
+                                    id: Date.now() + 100,
+                                    name: 'MacBook Air M2 (來自 CSV 解析)',
+                                    model: 'MacBook Air',
+                                    processor: 'Apple M2',
+                                    memory: '16GB',
+                                    storage: '512GB',
+                                    screen: '13.6吋',
+                                    condition: 'new',
+                                    price: 42900,
+                                    originalPrice: 42900,
+                                    source: 'uploaded_products.csv',
+                                    url: '#',
+                                    availability: '現貨',
+                                    warranty: '1年保固',
+                                    lastUpdated: new Date()
+                                },
+                                {
+                                    id: Date.now() + 101,
+                                    name: 'iMac 24吋 M3 (來自 HTML 解析)',
+                                    model: 'iMac',
+                                    processor: 'Apple M3',
+                                    memory: '16GB',
+                                    storage: '512GB',
+                                    screen: '24吋 4.5K',
+                                    condition: 'new',
+                                    price: 62900,
+                                    originalPrice: 62900,
+                                    source: 'product_page.html',
+                                    url: 'https://example.com/imac',
+                                    availability: '現貨',
+                                    warranty: '1年保固',
+                                    lastUpdated: new Date()
+                                }
+                            ];
+                            
+                            parseSimulationData.forEach(product => {
+                                saveToDatabase(product);
+                            });
+                            persistDatabase();
+                            syncDatabaseToProducts();
+                            
+                            parseResults = parseSimulationData; // Keep this for specific UI if needed
+                            
+                            hideParseStatus();
+                            applyFilters(); // This will render products, stats, and chart
+                        }, 500);
+                    }, 500);
+                }, 500);
+            }, 500);
+        }
+
+        // 新增 URL 來源
+        async function addUrlSource() { // Made async
+            const url = document.getElementById('websiteUrl').value.trim();
+            if (!url) {
+                alert('請輸入有效的網址');
+                return;
+            }
+
+            showParseStatus(`正在分析網址: ${url}`);
+            
+            // 模擬網頁抓取和智能解析過程
+            await new Promise(resolve => setTimeout(resolve, 500));
+            updateParseProgress(30, '正在抓取網頁內容...');
+            await new Promise(resolve => setTimeout(resolve, 500));
+            updateParseProgress(60, '正在解析商品資訊...');
+            await new Promise(resolve => setTimeout(resolve, 500));
+            updateParseProgress(90, '正在結構化數據...');
+            await new Promise(resolve => setTimeout(resolve, 500));
+            
+            const newProduct = generateProductFromUrl(url);
+            saveToDatabase(newProduct);
+            persistDatabase();
+            syncDatabaseToProducts();
+            applyFilters();
+            hideParseStatus();
+            document.getElementById('websiteUrl').value = '';
+            alert('成功新增商品資料！');
+        }
+
+        // 從 URL 生成商品資料 (智能分析)
+        function generateProductFromUrl(url) {
+            const domain = new URL(url).hostname.toLowerCase();
+            
+            let source = domain;
+            if (domain.includes('apple.com')) source = 'Apple Store Taiwan';
+            else if (domain.includes('pchome')) source = 'PChome 24h';
+            else if (domain.includes('momo')) source = 'momo購物網';
+            else if (domain.includes('shopee')) source = 'Shopee';
+            else if (domain.includes('yahoo')) source = 'Yahoo購物中心';
+            else if (domain.includes('ruten')) source = '露天拍賣';
+
+            const urlPath = url.toLowerCase();
+            let model = 'MacBook Air';
+            let processor = 'Apple M2';
+            let memory = '8GB';
+            let storage = '256GB';
+            let screen = '13.6吋';
+            let condition = 'new';
+            let basePrice = 35900;
+            let generatedUrl = url; // Default to original URL
+
+            if (urlPath.includes('macbook-pro') || urlPath.includes('macbook_pro')) {
+                model = 'MacBook Pro'; processor = 'Apple M3'; screen = '14.2吋'; basePrice = 61900;
+            } else if (urlPath.includes('imac')) {
+                model = 'iMac'; screen = '24吋 4.5K'; basePrice = 48900;
+            } else if (urlPath.includes('mac-mini') || urlPath.includes('mac_mini')) {
+                model = 'Mac mini'; screen = '無'; basePrice = 19900;
+            } else if (urlPath.includes('mac-studio') || urlPath.includes('mac_studio')) {
+                model = 'Mac Studio'; processor = 'Apple M2 Max'; screen = '無'; basePrice = 79900;
+            }
+
+            if (urlPath.includes('16gb') || urlPath.includes('16-gb')) { memory = '16GB'; basePrice += 6000; }
+            else if (urlPath.includes('32gb') || urlPath.includes('32-gb')) { memory = '32GB'; basePrice += 12000; }
+
+            if (urlPath.includes('512gb') || urlPath.includes('512-gb')) { storage = '512GB'; basePrice += 6000; }
+            else if (urlPath.includes('1tb') || urlPath.includes('1-tb')) { storage = '1TB'; basePrice += 12000; }
+
+            if (urlPath.includes('refurbished') || urlPath.includes('整新')) { condition = 'refurbished'; basePrice = Math.round(basePrice * 0.85); }
+            else if (urlPath.includes('used') || urlPath.includes('二手')) { condition = 'used-a'; basePrice = Math.round(basePrice * 0.75); }
+            else if (urlPath.includes('education') || urlPath.includes('student')) { condition = 'student'; basePrice = Math.round(basePrice * 0.92); }
+
+            const priceVariation = (Math.random() - 0.5) * 0.1; // ±5%
+            const finalPrice = Math.round(basePrice * (1 + priceVariation));
+
+            // Attempt to generate a more specific URL for Apple Store
+            if (source === 'Apple Store Taiwan' && (url === 'https://apple.com/tw' || url === 'https://www.apple.com/tw' || url === 'https://www.apple.com/tw/')) {
+                let modelPath = model.toLowerCase().replace(/\s+/g, '-');
+                if (model === 'MacBook Air') modelPath = 'macbook-air';
+                else if (model === 'MacBook Pro') modelPath = 'macbook-pro';
+                else if (model === 'iMac') modelPath = 'imac';
+                else if (model === 'Mac mini') modelPath = 'mac-mini';
+                else if (model === 'Mac Studio') modelPath = 'mac-studio';
+
+                const processorPath = processor.toLowerCase().replace(/\s+/g, '-').replace('apple-', '');
+                const memoryPath = memory.toLowerCase();
+                const storagePath = storage.toLowerCase();
+                // Simplified search query, actual Apple search URL might be different or use query parameters
+                generatedUrl = `https://www.apple.com/tw/search/${modelPath}-${processorPath}-${memoryPath}-${storagePath}?src=globalnav`;
+            }
+
+
+            return {
+                id: Date.now() + Math.random(), name: `${model} ${processor}`, model, processor, memory, storage, screen,
+                condition, price: finalPrice, originalPrice: basePrice, source, url: generatedUrl,
+                availability: Math.random() > 0.2 ? '現貨' : '預購',
+                warranty: condition === 'new' ? '1年保固' : condition === 'refurbished' ? '1年保固' : '3個月保固',
+                lastUpdated: new Date()
+            };
+        }
+
+        // 套用篩選條件
+        function applyFilters() {
+            const modelFiltersChecked = {
+                'macbook-air': document.getElementById('macbook-air').checked,
+                'macbook-pro': document.getElementById('macbook-pro').checked,
+                'imac': document.getElementById('imac').checked,
+                'mac-mini': document.getElementById('mac-mini').checked,
+                'mac-studio': document.getElementById('mac-studio').checked
+            };
+            const memoryFiltersChecked = {
+                'ram-8gb': document.getElementById('ram-8gb').checked,
+                'ram-16gb': document.getElementById('ram-16gb').checked,
+                'ram-32gb': document.getElementById('ram-32gb').checked,
+                'ram-64gb': document.getElementById('ram-64gb').checked
+            };
+            const storageFiltersChecked = {
+                'storage-256gb': document.getElementById('storage-256gb').checked,
+                'storage-512gb': document.getElementById('storage-512gb').checked,
+                'storage-1tb': document.getElementById('storage-1tb').checked,
+                'storage-2tb': document.getElementById('storage-2tb').checked
+            };
+            const conditionFiltersChecked = {
+                'condition-new': document.getElementById('condition-new').checked,
+                'condition-refurbished': document.getElementById('condition-refurbished').checked,
+                'condition-used-a': document.getElementById('condition-used-a').checked,
+                'condition-used-b': document.getElementById('condition-used-b').checked,
+                'condition-used-c': document.getElementById('condition-used-c').checked,
+                'condition-student': document.getElementById('condition-student').checked
+            };
+            const minPrice = parseInt(document.getElementById('minPrice').value) || 0;
+            const maxPrice = parseInt(document.getElementById('maxPrice').value) || Infinity;
+
+            filteredProducts = allProducts.filter(product => {
+                const modelMap = { 'MacBook Air': 'macbook-air', 'MacBook Pro': 'macbook-pro', 'iMac': 'imac', 'Mac mini': 'mac-mini', 'Mac Studio': 'mac-studio' };
+                if (!modelFiltersChecked[modelMap[product.model]]) return false;
+                
+                const memoryMap = { '8GB': 'ram-8gb', '16GB': 'ram-16gb', '32GB': 'ram-32gb' }; // Simplified, add more for 64GB+
+                let memoryMatch = false;
+                if (memoryFiltersChecked[memoryMap[product.memory]]) memoryMatch = true;
+                if (product.memory.includes('64GB') || product.memory.includes('128GB')) { // Handle 64GB+
+                    if (memoryFiltersChecked['ram-64gb']) memoryMatch = true;
+                }
+                if (!memoryMatch && (memoryFiltersChecked['ram-8gb'] || memoryFiltersChecked['ram-16gb'] || memoryFiltersChecked['ram-32gb'] || memoryFiltersChecked['ram-64gb'])) { // if any memory filter is active
+                     if (!memoryFiltersChecked[memoryMap[product.memory]] && !( (product.memory.includes('64GB') || product.memory.includes('128GB')) && memoryFiltersChecked['ram-64gb'] )) return false;
+                }
+
+
+                const storageMap = { '256GB': 'storage-256gb', '512GB': 'storage-512gb', '1TB': 'storage-1tb' }; // Simplified
+                let storageMatch = false;
+                if (storageFiltersChecked[storageMap[product.storage]]) storageMatch = true;
+                 if (product.storage.includes('2TB') || product.storage.includes('4TB') || product.storage.includes('8TB') ) { // Handle 2TB+
+                    if (storageFiltersChecked['storage-2tb']) storageMatch = true;
+                }
+                if (!storageMatch && (storageFiltersChecked['storage-256gb'] || storageFiltersChecked['storage-512gb'] || storageFiltersChecked['storage-1tb'] || storageFiltersChecked['storage-2tb'])) {
+                    if (!storageFiltersChecked[storageMap[product.storage]] && !( (product.storage.includes('2TB') || product.storage.includes('4TB') || product.storage.includes('8TB')) && storageFiltersChecked['storage-2tb'] )) return false;
+                }
+
+
+                const conditionMap = { 'new': 'condition-new', 'refurbished': 'condition-refurbished', 'used-a': 'condition-used-a', 'used-b': 'condition-used-b', 'used-c': 'condition-used-c', 'student': 'condition-student' };
+                if (!conditionFiltersChecked[conditionMap[product.condition]]) return false;
+
+                if (product.price < minPrice || product.price > maxPrice) return false;
+
+                return true;
+            });
+
+            renderProducts();
+            updateStats();
+            renderChart(); // Called by switchAnalysisTab or directly if needed
+            if (document.getElementById('priceAnalysisPanel').style.display !== 'none') updatePriceAnalysis();
+            if (document.getElementById('specsAnalysisPanel').style.display !== 'none') updateSpecsAnalysis();
+            if (document.getElementById('trendsAnalysisPanel').style.display !== 'none') updateTrendsAnalysis();
+        }
+
+        // 渲染商品
+        function renderProducts() {
+            const container = document.getElementById('products-container');
+            
+            if (filteredProducts.length === 0) {
+                container.innerHTML = '<div style="text-align: center; padding: 3rem; color: #666;">未找到符合條件的商品</div>';
+                return;
+            }
+
+            if (currentView === 'grid') {
+                container.className = 'products-grid';
+                container.innerHTML = filteredProducts.map(product => createProductCard(product)).join('');
+            } else if (currentView === 'table') {
+                container.className = ''; // Remove grid class for table view
+                container.innerHTML = createProductTable(filteredProducts);
+            }
+            // Chart view is handled by switchView
+        }
+
+        // 建立商品卡片
+        function createProductCard(product) {
+            const conditionText = {
+                'new': '全新', 'refurbished': '官方整新品', 'used-a': '二手 A 級',
+                'used-b': '二手 B 級', 'used-c': '二手 C 級', 'student': '教育價'
+            };
+            const discount = product.originalPrice && product.originalPrice !== product.price 
+                ? Math.round((1 - product.price / product.originalPrice) * 100) : 0;
+
+            let sourceIcon = '🌐'; let sourceType = 'URL 抓取';
+            if (product.source.includes('.csv')) { sourceIcon = '📊'; sourceType = 'CSV 解析'; }
+            else if (product.source.includes('.html')) { sourceIcon = '🔍'; sourceType = 'HTML 解析'; }
+            else if (product.source.includes('.md')) { sourceIcon = '📝'; sourceType = 'Markdown 解析'; }
+            else if (product.source.includes('.txt')) { sourceIcon = '📄'; sourceType = 'TXT 解析'; }
+
+            return `
+                <div class="product-card">
+                    <div class="product-header">
+                        <div class="product-title">${product.name}</div>
+                        <div style="display: flex; gap: 0.5rem; align-items: center;">
+                            <div class="condition-badge condition-${product.condition}">
+                                ${conditionText[product.condition] || product.condition}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="product-specs">
+                        <div class="spec-item"><span class="spec-label">處理器</span><span class="spec-value">${product.processor}</span></div>
+                        <div class="spec-item"><span class="spec-label">記憶體 (GB)</span><span class="spec-value">${(product.memory || "").replace('GB', '')}</span></div>
+                        <div class="spec-item"><span class="spec-label">儲存空間 (GB/TB)</span><span class="spec-value">${(product.storage || "").replace(/GB|TB/g, '')}</span></div>
+                        <div class="spec-item"><span class="spec-label">螢幕 (吋)</span><span class="spec-value">${(product.screen || "").replace('吋', '')}</span></div>
+                        <div class="spec-item"><span class="spec-label">供貨狀況</span><span class="spec-value">${product.availability || '未知'}</span></div>
+                    </div>
+                    <div class="product-price">
+                        <span class="price-amount">${product.price.toLocaleString()}</span>
+                        <span class="price-currency">TWD</span>
+                        ${discount > 0 ? `<div style="font-size: 0.9rem; color: #30D158; margin-top: 0.2rem;">省下 ${discount}%</div>` : ''}
+                    </div>
+                    <div class="product-source">
+                        <div style="display: flex; align-items: center; justify-content: center; gap: 0.5rem; margin-bottom: 0.3rem;">
+                            <span style="font-size: 1.2rem;">${sourceIcon}</span>
+                            <span style="font-size: 0.8rem; color: #007AFF; font-weight: 500;">${sourceType}</span> <!-- Blueprint: 主色 for link-like text -->
+                        </div>
+                        <div style="font-size: 0.9rem;">📍 ${product.source}</div>
+                    </div>
+                    <div class="product-actions">
+                        <button class="btn btn-small" onclick="window.open('${product.url}', '_blank')" ${product.url === '#' ? 'disabled style="opacity: 0.5;"' : ''}>
+                            ${product.url === '#' ? '無連結' : '前往購買'}
+                        </button>
+                        <button class="btn btn-small btn-secondary" onclick="addToCompare(${product.id})">
+                            加入比較
+                        </button>
+                    </div>
+                </div>`;
+        }
+
+        // 建立商品表格
+        function createProductTable(products) {
+            const conditionText = {
+                'new': '全新', 'refurbished': '官方整新品', 'used-a': '二手 A 級',
+                'used-b': '二手 B 級', 'used-c': '二手 C 級', 'student': '教育價'
+            };
+            return `
+                <div style="overflow-x: auto;">
+                    <table style="width: 100%; border-collapse: collapse; margin-top: 1rem;">
+                        <thead>
+                            <tr style="background: #F8F9FA; border-bottom: 2px solid #E5E5EA;">
+                                <th style="padding: 1rem; text-align: left; font-weight: 600;">產品名稱</th>
+                                <th style="padding: 1rem; text-align: left; font-weight: 600;">規格</th>
+                                <th style="padding: 1rem; text-align: left; font-weight: 600;">狀況</th>
+                                <th style="padding: 1rem; text-align: left; font-weight: 600;">價格</th>
+                                <th style="padding: 1rem; text-align: left; font-weight: 600;">來源</th>
+                                <th style="padding: 1rem; text-align: left; font-weight: 600;">動作</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${products.map(product => `
+                                <tr style="border-bottom: 1px solid #F2F2F7;">
+                                    <td style="padding: 1rem; font-weight: 600;">${product.name}</td>
+                                    <td style="padding: 1rem; font-size: 0.9rem; color: #666;">
+                                        ${product.processor}<br>
+                                        ${(product.memory || "").replace('GB', '')}GB / ${(product.storage || "").replace(/GB|TB/g, '')}${(product.storage || "").includes("TB") ? "TB" : "GB"}
+                                    </td>
+                                    <td style="padding: 1rem;">
+                                        <span class="condition-badge condition-${product.condition}">
+                                            ${conditionText[product.condition] || product.condition}
+                                        </span>
+                                    </td>
+                                    <td style="padding: 1rem; font-size: 1.2rem; font-weight: 600; color: #007AFF;"> <!-- Blueprint: 主色 -->
+                                        $${product.price.toLocaleString()}
+                                    </td>
+                                    <td style="padding: 1rem; font-size: 0.9rem; color: #666;">${product.source}</td>
+                                    <td style="padding: 1rem;">
+                                        <button class="btn btn-small" onclick="window.open('${product.url}', '_blank')" ${product.url === '#' ? 'disabled' : ''}>購買</button>
+                                        <button class="btn btn-small btn-secondary" onclick="addToCompare(${product.id})">比較</button>
+                                    </td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                </div>`;
+        }
+
+        // 切換檢視模式
+        function switchView(view) {
+            currentView = view;
+            document.querySelectorAll('.view-btn').forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active'); // Make sure event is passed or use a direct reference
+            
+            const productsContainer = document.getElementById('products-container');
+            if (view === 'chart') {
+                productsContainer.innerHTML = '<div class="chart-container" style="height: 400px;"><canvas id="detailChart"></canvas></div>';
+                renderDetailChart();
+            } else {
+                renderProducts();
+            }
+        }
+
+        // 更新統計資訊
+        function updateStats() {
+            const total = filteredProducts.length;
+            const average = total > 0 ? Math.round(filteredProducts.reduce((sum, p) => sum + p.price, 0) / total) : 0;
+            const prices = filteredProducts.map(p => p.price);
+            const priceRange = total > 0 && prices.length > 0 ? Math.max(...prices) - Math.min(...prices) : 0;
+            const sources = new Set(filteredProducts.map(p => p.source)).size;
+
+            document.getElementById('totalProducts').textContent = total;
+            document.getElementById('averagePrice').textContent = `$${average.toLocaleString()}`;
+            document.getElementById('priceRange').textContent = `$${priceRange.toLocaleString()}`;
+            document.getElementById('sourcesCount').textContent = sources;
+        }
+
+        // 渲染價格圖表 (This function seems to be for a different chart, priceChart is not globally defined in the last HTML block)
+        // The main chart rendering logic is within updatePriceAnalysis, updateSpecsAnalysis, updateTrendsAnalysis
+        // This function might be a leftover or intended for a different chart.
+        // For now, ensure renderChart calls the correct analysis update.
+        let priceChartInstance = null; // Specific instance for the scatter plot if needed
+        function renderChart() { // This function is called by applyFilters
+            // The actual chart rendering is now part of switchAnalysisTab and its helper functions.
+            // This function can be a general trigger or be removed if switchAnalysisTab handles all cases.
+            // For now, let's assume it might be for a general overview chart if one existed.
+            // If currentAnalysisTab is 'price', 'specs', or 'trends', their respective update functions will handle charts.
+            const activeTab = document.querySelector('.analysis-tab.active');
+            if (activeTab) {
+                switchAnalysisTab(activeTab.dataset.tab);
+            } else {
+                 switchAnalysisTab('price'); // Default if no tab is active
+            }
+        }
+
+
+        // 渲染詳細圖表 (Doughnut chart for price distribution)
+        function renderDetailChart() { // This is for the 'chart' view in results-section
+            const ctx = document.getElementById('detailChart').getContext('2d');
+            if (window.detailChartInstance) {
+                window.detailChartInstance.destroy();
+            }
+            
+            const priceRanges = ['<20K', '20K-40K', '40K-60K', '60K-80K', '80K+'];
+            const rangeCounts = [0, 0, 0, 0, 0];
+
+            filteredProducts.forEach(product => {
+                if (product.price < 20000) rangeCounts[0]++;
+                else if (product.price < 40000) rangeCounts[1]++;
+                else if (product.price < 60000) rangeCounts[2]++;
+                else if (product.price < 80000) rangeCounts[3]++;
+                else rangeCounts[4]++;
+            });
+
+            window.detailChartInstance = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: priceRanges,
+                    datasets: [{ data: rangeCounts, backgroundColor: ['#30D158', '#34C759', '#007AFF', '#FF9500', '#FF3B30'] }]
+                },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { title: { display: true, text: '價格分佈圖', font: { size: 16, weight: 'bold' } } } }
+            });
+        }
+        
+        // 加入比較 (Placeholder, blueprint suggests more complex functionality)
+        function addToCompare(productId) {
+            const product = allProducts.find(p => p.id === productId);
+            if (product) {
+                const compareInfo = `已加入比較: ${product.name}\n價格: ${product.price.toLocaleString()}\n規格: ${product.processor}, ${product.memory}, ${product.storage}\n來源: ${product.source}`;
+                alert(compareInfo);
+                console.log('加入比較的產品:', product);
+            }
+        }
+
+
+        // 匯出資料
+        function exportData() { // Renamed from exportDatabase to avoid conflict if a different exportData was intended
+            if (filteredProducts.length === 0) {
+                alert('沒有可匯出的資料。');
+                return;
+            }
+            const data = filteredProducts.map(product => ({
+                '產品名稱': product.name, '型號': product.model, '處理器': product.processor,
+                '記憶體': product.memory, '儲存空間': product.storage, '螢幕': product.screen,
+                '狀況': product.condition, '價格': product.price, '來源': product.source, '網址': product.url
+            }));
+            const csv = convertToCSV(data);
+            downloadCSV(csv, 'mac_price_comparison.csv');
+        }
+
+        function convertToCSV(data) {
+            if (!data || data.length === 0) return "";
+            const headers = Object.keys(data[0]).join(',');
+            const rows = data.map(row => Object.values(row).map(val => `"${String(val || '').replace(/"/g, '""')}"`).join(',')); // Handle null/undefined and escape quotes
+            return [headers, ...rows].join('\n');
+        }
+
+        function downloadCSV(csv, filename) {
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' }); // Added charset
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            a.click();
+            window.URL.revokeObjectURL(url);
+        }
+
+        function showLoading() { document.getElementById('loading').style.display = 'block'; document.getElementById('products-container').style.display = 'none'; }
+        function hideLoading() { document.getElementById('loading').style.display = 'none'; document.getElementById('products-container').style.display = 'block'; }
+        
+        // === 視覺化分析功能 ===
+        let currentAnalysisTab = 'price';
+        // currentPrompt is already defined globally
+
+        function switchAnalysisTab(tab) {
+            document.querySelectorAll('.analysis-tab').forEach(t => t.classList.remove('active'));
+            const activeTabButton = document.querySelector(`.analysis-tab[data-tab="${tab}"]`);
+            if (activeTabButton) activeTabButton.classList.add('active');
+            
+            document.querySelectorAll('.analysis-panel').forEach(panel => panel.style.display = 'none');
+            const targetPanel = document.getElementById(`${tab}AnalysisPanel`);
+            if (targetPanel) targetPanel.style.display = 'block';
+            
+            currentAnalysisTab = tab;
+            
+            switch(tab) {
+                case 'price': updatePriceAnalysis(); break;
+                case 'specs': updateSpecsAnalysis(); break;
+                case 'trends': updateTrendsAnalysis(); break;
+                case 'ai': /* AI panel updated on button click */ break;
+            }
+        }
+
+        function updatePriceAnalysis() {
+            if (filteredProducts.length === 0) {
+                document.getElementById('priceDifferenceStats').innerHTML = '<p>無產品可分析</p>';
+                document.getElementById('bestPriceRecommendations').innerHTML = '<p>無產品可推薦</p>';
+                if (window.priceComparisonChartInstance) window.priceComparisonChartInstance.destroy();
+                return;
+            }
+            const prices = filteredProducts.map(p => p.price);
+            const minPrice = Math.min(...prices); const maxPrice = Math.max(...prices);
+            const avgPrice = Math.round(prices.reduce((a, b) => a + b, 0) / prices.length);
+            const priceDiff = maxPrice - minPrice;
+            const priceVariance = prices.length > 1 ? Math.round(Math.sqrt(prices.reduce((sum, price) => sum + Math.pow(price - avgPrice, 2), 0) / (prices.length -1 ))) : 0; // Sample variance
+
+            document.getElementById('priceDifferenceStats').innerHTML = `
+                <div class="price-difference-item"><span><strong>價格範圍</strong></span><span style="color: #007AFF; font-weight: 600;">${minPrice.toLocaleString()} - ${maxPrice.toLocaleString()}</span></div> <!-- Blueprint: 主色 -->
+                <div class="price-difference-item ${priceDiff > 10000 ? 'price-difference-negative' : 'price-difference-positive'}"><span><strong>最大價差</strong></span><span style="font-weight: 600;">${priceDiff.toLocaleString()}</span></div>
+                <div class="price-difference-item"><span><strong>平均價格</strong></span><span style="color: #34C759; font-weight: 600;">${avgPrice.toLocaleString()}</span></div> <!-- Blueprint: 次要色 -->
+                <div class="price-difference-item"><span><strong>價格標準差</strong></span><span style="color: #FF9500; font-weight: 600;">±${priceVariance.toLocaleString()}</span></div>`; /* Blueprint: 強調色 */
+
+            const recommendations = generatePriceRecommendations();
+            document.getElementById('bestPriceRecommendations').innerHTML = recommendations;
+            renderPriceComparisonChart();
+        }
+
+        function generatePriceRecommendations() {
+            if (filteredProducts.length === 0) return '<p>無產品可推薦</p>';
+            const sortedProducts = [...filteredProducts].sort((a, b) => a.price - b.price);
+            const bestValue = findBestValueProduct();
+            const cheapest = sortedProducts[0];
+            const premium = sortedProducts[sortedProducts.length - 1];
+
+            return `
+                <div style="margin-bottom: 1rem;"><h4 style="color: #30D158; margin-bottom: 0.5rem;">🏆 最佳性價比</h4><div style="background: white; padding: 0.8rem; border-radius: 6px; border-left: 4px solid #30D158;"><strong>${bestValue.name}</strong><br><span style="color: #007AFF;">${bestValue.price.toLocaleString()}</span> - ${bestValue.source}</div></div>
+                <div style="margin-bottom: 1rem;"><h4 style="color: #007AFF; margin-bottom: 0.5rem;">💰 最便宜選項</h4><div style="background: white; padding: 0.8rem; border-radius: 6px; border-left: 4px solid #007AFF;"><strong>${cheapest.name}</strong><br><span style="color: #007AFF;">${cheapest.price.toLocaleString()}</span> - ${cheapest.source}</div></div>
+                <div><h4 style="color: #FF9500; margin-bottom: 0.5rem;">⭐ 頂級配置</h4><div style="background: white; padding: 0.8rem; border-radius: 6px; border-left: 4px solid #FF9500;"><strong>${premium.name}</strong><br><span style="color: #007AFF;">${premium.price.toLocaleString()}</span> - ${premium.source}</div></div>`;
+        }
+
+        function findBestValueProduct() {
+            if (filteredProducts.length === 0) return { name: "N/A", price: 0, source: "N/A" }; // Fallback
+            return filteredProducts.reduce((best, current) => {
+                const currentScore = calculateValueScore(current);
+                const bestScore = calculateValueScore(best);
+                return currentScore > bestScore ? current : best;
+            }, filteredProducts[0]); // Provide initial value for reduce
+        }
+
+        function calculateValueScore(product) {
+            const memoryScore = getMemoryScore(product.memory);
+            const storageScore = getStorageScore(product.storage);
+            const processorScore = getProcessorScore(product.processor);
+            const conditionScore = getConditionScore(product.condition);
+            const totalSpecs = memoryScore + storageScore + processorScore + conditionScore;
+            return product.price > 0 ? totalSpecs / (product.price / 1000) : 0; // Avoid division by zero
+        }
+
+        function getMemoryScore(memory) { const scores = { '8GB': 1, '16GB': 2, '32GB': 4, '64GB': 6, '128GB': 8 }; return scores[memory] || 1; }
+        function getStorageScore(storage) { const scores = { '256GB': 1, '512GB': 2, '1TB': 4, '2TB': 6, '4TB': 8, '8TB': 10 }; return scores[storage] || 1; }
+        function getProcessorScore(processor = "") { // Added default value
+            if (processor.includes('M3 Ultra')) return 10; if (processor.includes('M3 Max')) return 8; if (processor.includes('M3 Pro')) return 6;
+            if (processor.includes('M3')) return 5; if (processor.includes('M2')) return 4; if (processor.includes('M1')) return 3; return 2;
+        }
+        function getConditionScore(condition) { const scores = { 'new': 3, 'refurbished': 2.5, 'student': 3, 'used-a': 2, 'used-b': 1.5, 'used-c': 1 }; return scores[condition] || 1; }
+
+        function updateSpecsAnalysis() {
+            if (filteredProducts.length === 0) {
+                document.getElementById('specsComparisonTable').innerHTML = '<p>無產品可分析</p>';
+                if(window.specsDistributionChartInstance) window.specsDistributionChartInstance.destroy();
+                if(window.performanceScoreChartInstance) window.performanceScoreChartInstance.destroy();
+                return;
+            }
+            generateSpecsComparisonTable();
+            renderSpecsDistributionChart();
+            renderPerformanceScoreChart();
+            enhanceSpecsComparison();
+        }
+
+        function generateSpecsComparisonTable() {
+            const uniqueProducts = getUniqueProductsByModel();
+            if (uniqueProducts.length === 0) {
+                 document.getElementById('specsComparisonTable').innerHTML = '<p>無獨特產品型號可比較</p>';
+                 return;
+            }
+            
+            const table = `
+                <div class="specs-comparison-grid">
+                    <div class="specs-cell specs-header">產品型號</div>
+                    ${uniqueProducts.map(p => `<div class="specs-cell specs-header">${p.model}</div>`).join('')}
+                    <div class="specs-cell specs-header">處理器</div>
+                    ${uniqueProducts.map(p => `<div class="specs-cell ${hasSpecsDifference(uniqueProducts, 'processor') ? 'specs-different' : ''}">${p.processor}</div>`).join('')}
+                    <div class="specs-cell specs-header">記憶體</div>
+                    ${uniqueProducts.map(p => `<div class="specs-cell ${hasSpecsDifference(uniqueProducts, 'memory') ? 'specs-different' : ''}">${p.memory}</div>`).join('')}
+                    <div class="specs-cell specs-header">儲存空間</div>
+                    ${uniqueProducts.map(p => `<div class="specs-cell ${hasSpecsDifference(uniqueProducts, 'storage') ? 'specs-different' : ''}">${p.storage}</div>`).join('')}
+                    <div class="specs-cell specs-header">螢幕</div>
+                    ${uniqueProducts.map(p => `<div class="specs-cell ${hasSpecsDifference(uniqueProducts, 'screen') ? 'specs-different' : ''}">${p.screen}</div>`).join('')}
+                    <div class="specs-cell specs-header">價格</div>
+                    ${uniqueProducts.map(p => `<div class="specs-cell" style="color: #007AFF; font-weight: 600;">${p.price.toLocaleString()}</div>`).join('')}
+                    <div class="specs-cell specs-header">性能評分</div>
+                    ${uniqueProducts.map(p => {
+                        const score = calculateValueScore(p);
+                        const level = score > 3 ? 'high' : score > 1.5 ? 'medium' : 'low';
+                        return `<div class="specs-cell">${score.toFixed(1)}<span class="performance-badge performance-${level}" style="background-color:${level === 'high' ? '#30D158' : level === 'medium' ? '#FFCC00' : '#FF3B30'}; color: ${level === 'medium' ? '#1D1D1F' : 'white'};">${level.toUpperCase()}</span></div>`;
+                    }).join('')}
+                </div>`;
+            document.getElementById('specsComparisonTable').innerHTML = table;
+        }
+
+        function getUniqueProductsByModel() {
+            const seen = new Set();
+            return filteredProducts.filter(product => {
+                const key = `${product.model}_${product.memory}_${product.storage}`;
+                if (seen.has(key)) return false;
+                seen.add(key); return true;
+            }).slice(0, 6);
+        }
+
+        function hasSpecsDifference(products, field) { const values = new Set(products.map(p => p[field])); return values.size > 1; }
+        
+        function updateTrendsAnalysis() { renderTrendAnalysisChart(); } // Default to price distribution
+
+        async function generateTrendForecast() { // Made async
+            showParseStatus('正在生成價格趨勢預測...');
+            await new Promise(resolve => setTimeout(resolve, 2000)); // Simulate async operation
+            const forecast = generateMockForecast();
+            renderTrendAnalysisChart(forecast); // Pass forecast data
+            hideParseStatus();
+            alert('趨勢預測已生成！圖表顯示未來 6 個月的價格預測。');
+        }
+        
+        async function analyzePricePattern() { // Made async
+            showParseStatus('正在分析價格模式...');
+            await new Promise(resolve => setTimeout(resolve, 1500)); // Simulate async operation
+            const patterns = analyzePricePatterns();
+            displayPricePatterns(patterns);
+            hideParseStatus();
+        }
+        
+        async function showPriceDistribution() { // Made async
+            showParseStatus('正在生成價格分布分析...');
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            renderPriceDistributionChart(); // Specific function for doughnut chart
+            hideParseStatus();
+            document.getElementById('pricePatternResults').style.display = 'block';
+            document.getElementById('pricePatternResults').innerHTML = generatePriceDistributionSummary();
+        }
+
+        function generatePriceDistributionSummary() {
+            if (filteredProducts.length === 0) return '<p>無數據可分析</p>';
+            const prices = filteredProducts.map(p => p.price).sort((a, b) => a - b);
+            const q1 = prices[Math.floor(prices.length * 0.25)];
+            const median = prices[Math.floor(prices.length * 0.5)];
+            const q3 = prices[Math.floor(prices.length * 0.75)];
+            const iqr = q3 - q1;
+            return `
+                <div style="background: #F8F9FA; padding: 1rem; border-radius: 8px;">
+                    <h4 style="margin-bottom: 1rem;">📊 價格分布統計</h4>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
+                        <div class="price-difference-item"><span><strong>第一四分位數 (Q1)</strong></span><span style="color: #007AFF; font-weight: 600;">${q1.toLocaleString()}</span></div>
+                        <div class="price-difference-item"><span><strong>中位數 (Q2)</strong></span><span style="color: #34C759; font-weight: 600;">${median.toLocaleString()}</span></div>
+                        <div class="price-difference-item"><span><strong>第三四分位數 (Q3)</strong></span><span style="color: #FF9500; font-weight: 600;">${q3.toLocaleString()}</span></div>
+                        <div class="price-difference-item"><span><strong>四分位距 (IQR)</strong></span><span style="color: #5856D6; font-weight: 600;">${iqr.toLocaleString()}</span></div>
+                    </div>
+                    <div style="margin-top: 1rem;"><p><strong>分析結果：</strong></p><ul style="margin: 0.5rem 0; padding-left: 1.5rem; color: #666;">
+                        <li>50% 的產品價格介於 ${q1.toLocaleString()} - ${q3.toLocaleString()} 之間</li>
+                        <li>中位數價格為 ${median.toLocaleString()}，是較為均衡的選擇</li>
+                        <li>價格離散程度：${iqr > 20000 ? '較高' : iqr > 10000 ? '中等' : '較低'}</li>
+                    </ul></div></div>`;
+        }
+        
+        function enhanceSpecsComparison() {
+            if (filteredProducts.length === 0) return;
+            const similarityData = calculateSpecsSimilarity();
+            if (similarityData.products.length > 0) { // Ensure there are products to compare
+                 displaySimilarityMatrix(similarityData);
+            }
+        }
+
+        function calculateSpecsSimilarity() {
+            const products = getUniqueProductsByModel();
+            const similarity = [];
+            for (let i = 0; i < products.length; i++) {
+                similarity[i] = [];
+                for (let j = 0; j < products.length; j++) {
+                    if (i === j) similarity[i][j] = 1;
+                    else similarity[i][j] = compareProductSpecs(products[i], products[j]);
+                }
+            }
+            return { products, similarity };
+        }
+
+        function compareProductSpecs(p1, p2) {
+            let score = 0; let total = 0;
+            if (p1.processor === p2.processor) score++; total++;
+            if (p1.memory === p2.memory) score++; total++;
+            if (p1.storage === p2.storage) score++; total++;
+            if (p1.screen === p2.screen) score++; total++;
+            if (p1.model === p2.model) score += 0.5; total += 0.5;
+            return total > 0 ? score / total : 0;
+        }
+
+        function displaySimilarityMatrix(data) {
+            const { products, similarity } = data;
+            if (products.length === 0) return; // Don't display if no products
+            let matrixHtml = `
+                <div style="margin-top: 1.5rem; background: #F8F9FA; padding: 1rem; border-radius: 8px;">
+                    <h4 style="margin-bottom: 1rem;">🔗 產品相似度矩陣</h4><div style="overflow-x: auto;">
+                    <table style="width: 100%; border-collapse: collapse;"><thead><tr>
+                    <th style="padding: 0.5rem; background: white; border: 1px solid #E5E5EA;"></th>
+                    ${products.map((p, i) => `<th style="padding: 0.5rem; background: white; border: 1px solid #E5E5EA; font-size: 0.8rem;">${p.model.substring(0,10)} ${i + 1}</th>`).join('')}
+                    </tr></thead><tbody>
+                    ${products.map((p1, i) => `<tr>
+                        <td style="padding: 0.5rem; background: white; border: 1px solid #E5E5EA; font-weight: 600; font-size: 0.8rem;">${p1.model.substring(0,10)} ${i + 1}</td>
+                        ${products.map((p2, j) => {
+                            const score = similarity[i][j];
+                            const color = score > 0.8 ? '#30D158' : score > 0.6 ? '#FF9500' : score > 0.4 ? '#007AFF' : '#FF3B30';
+                            return `<td style="padding: 0.5rem; background: white; border: 1px solid #E5E5EA; text-align: center; color: ${color}; font-weight: 600;">${(score * 100).toFixed(0)}%</td>`;
+                        }).join('')}</tr>`).join('')}
+                    </tbody></table></div>
+                    <div style="margin-top: 1rem; font-size: 0.9rem; color: #666;"><p><strong>相似度說明：</strong></p>
+                    <ul style="margin: 0.5rem 0; padding-left: 1.5rem;">
+                        <li><span style="color: #30D158;">●</span> 80%+ 高度相似</li><li><span style="color: #FF9500;">●</span> 60-80% 中度相似</li>
+                        <li><span style="color: #007AFF;">●</span> 40-60% 低度相似</li><li><span style="color: #FF3B30;">●</span> <40% 差異較大</li>
+                    </ul></div></div>`;
+            const specsTableElement = document.getElementById('specsComparisonTable');
+            if (specsTableElement && specsTableElement.parentNode) { // Ensure parentNode exists
+                 specsTableElement.insertAdjacentHTML('afterend', matrixHtml);
+            }
+        }
+        
+        function generateMockForecast() {
+            if (filteredProducts.length === 0) return [];
+            const currentAvg = filteredProducts.reduce((sum, p) => sum + p.price, 0) / filteredProducts.length;
+            const forecast = [];
+            for (let i = 0; i < 6; i++) {
+                const trend = -0.02 * i; const seasonality = Math.sin((i + 1) * Math.PI / 6) * 0.05; const noise = (Math.random() - 0.5) * 0.1;
+                forecast.push({
+                    month: new Date(Date.now() + i * 30 * 24 * 60 * 60 * 1000).toLocaleDateString('zh-TW', { month: 'short' }),
+                    price: Math.round(currentAvg * (1 + trend + seasonality + noise))
+                });
+            }
+            return forecast;
+        }
+
+        function analyzePricePatterns() { // Corrected function name
+            if (filteredProducts.length === 0) return [];
+            const pricesBySource = {};
+            filteredProducts.forEach(product => {
+                if (!pricesBySource[product.source]) pricesBySource[product.source] = [];
+                pricesBySource[product.source].push(product.price);
+            });
+            const patterns = [];
+            for (const [source, prices] of Object.entries(pricesBySource)) {
+                if (prices.length > 1) {
+                    const avg = prices.reduce((a, b) => a + b, 0) / prices.length;
+                    const variance = Math.sqrt(prices.reduce((sum, price) => sum + Math.pow(price - avg, 2), 0) / prices.length);
+                    patterns.push({ source, avgPrice: Math.round(avg), variance: Math.round(variance), priceStability: variance < 5000 ? '穩定' : variance < 10000 ? '中等' : '波動大' });
+                }
+            }
+            return patterns;
+        }
+
+        function displayPricePatterns(patterns) {
+            if (patterns.length === 0) {
+                 document.getElementById('pricePatternResults').innerHTML = '<p>無價格模式可分析</p>'; return;
+            }
+            const patternsHtml = patterns.map(p => `
+                <div class="price-difference-item"><div><strong>${p.source}</strong><br><small>價格穩定性: ${p.priceStability}</small></div>
+                <div style="text-align: right;"><div style="color: #007AFF; font-weight: 600;">平均 ${p.avgPrice.toLocaleString()}</div><small style="color: #666;">變異 ±${p.variance.toLocaleString()}</small></div></div>`).join('');
+            document.getElementById('pricePatternResults').innerHTML = `<div style="margin-top: 1.5rem; background: #F8F9FA; padding: 1rem; border-radius: 8px;"><h4 style="margin-bottom: 1rem;">📊 各來源價格模式</h4>${patternsHtml}</div>`;
+            document.getElementById('pricePatternResults').style.display = 'block';
+        }
+        
+        // === 圖表渲染功能 ===
+        // Declare chart instances globally to manage them
+        let priceComparisonChartInstance = null;
+        let specsDistributionChartInstance = null;
+        let performanceScoreChartInstance = null;
+        let trendAnalysisChartInstance = null; // For the trends tab
+
+        function renderPriceComparisonChart() {
+            const ctx = document.getElementById('priceComparisonChart').getContext('2d');
+            if (priceComparisonChartInstance) priceComparisonChartInstance.destroy();
+            if (filteredProducts.length === 0) return;
+
+            const groupedData = {};
+            filteredProducts.forEach(product => {
+                if (!groupedData[product.source]) groupedData[product.source] = [];
+                groupedData[product.source].push(product);
+            });
+            const datasets = Object.entries(groupedData).map(([source, products], index) => {
+                const colors = ['#007AFF', '#34C759', '#FF9500', '#FF3B30', '#5856D6', '#AF52DE', '#30D158'];
+                return {
+                    label: source,
+                    data: products.map(p => ({ x: p.name.substring(0, 20) + (p.name.length > 20 ? '...' : ''), y: p.price })),
+                    backgroundColor: colors[index % colors.length] + 'B3', // Added alpha for better visibility
+                    borderColor: colors[index % colors.length], borderWidth: 1
+                };
+            });
+            priceComparisonChartInstance = new Chart(ctx, {
+                type: 'bar', data: { datasets },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { title: { display: true, text: '各來源價格比較', font: { size: 16, weight: 'bold' } }, legend: { display: true, position: 'top' } }, scales: { x: { title: { display: true, text: '產品型號' } }, y: { title: { display: true, text: '價格 (TWD)' }, ticks: { callback: value => '$' + value.toLocaleString() } } } }
+            });
+        }
+
+        function renderSpecsDistributionChart() {
+            const ctx = document.getElementById('specsDistributionChart').getContext('2d');
+            if (specsDistributionChartInstance) specsDistributionChartInstance.destroy();
+            if (filteredProducts.length === 0) return;
+            const memoryDist = getDistribution(filteredProducts, 'memory');
+            specsDistributionChartInstance = new Chart(ctx, {
+                type: 'doughnut', data: { labels: Object.keys(memoryDist), datasets: [{ data: Object.values(memoryDist), backgroundColor: ['#007AFF', '#34C759', '#FF9500', '#FF3B30', '#5856D6', '#AF52DE'] }] },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { title: { display: true, text: '記憶體配置分布', font: { size: 14, weight: 'bold' } }, legend: { position: 'bottom' } } }
+            });
+        }
+
+        function renderPerformanceScoreChart() {
+            const ctx = document.getElementById('performanceScoreChart').getContext('2d');
+            if (performanceScoreChartInstance) performanceScoreChartInstance.destroy();
+            const uniqueProducts = getUniqueProductsByModel();
+            if (uniqueProducts.length === 0) return;
+            const scores = uniqueProducts.map(p => calculateValueScore(p));
+            performanceScoreChartInstance = new Chart(ctx, {
+                type: 'radar', data: { labels: uniqueProducts.map(p => p.model.substring(0,15)), datasets: [{ label: '性能評分', data: scores, backgroundColor: 'rgba(0, 122, 255, 0.2)', borderColor: '#007AFF', borderWidth: 2, pointBackgroundColor: '#007AFF' }] },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { title: { display: true, text: '產品性能評分對比', font: { size: 14, weight: 'bold' } }, legend: { display: false } }, scales: { r: { beginAtZero: true, suggestedMax: Math.max(...scores, 0) * 1.2 || 5 } } } // Added suggestedMax fallback
+            });
+        }
+        
+        function renderTrendAnalysisChart(forecastData = null) { // For the trends tab
+            const ctx = document.getElementById('trendAnalysisChart').getContext('2d');
+            if (trendAnalysisChartInstance) trendAnalysisChartInstance.destroy();
+            if (filteredProducts.length === 0 && !forecastData) return;
+
+            if (forecastData) { // If forecast data is provided, show line chart
+                trendAnalysisChartInstance = new Chart(ctx, {
+                    type: 'line',
+                    data: { labels: forecastData.map(d => d.month), datasets: [{ label: '預測價格', data: forecastData.map(d => d.price), backgroundColor: 'rgba(88, 86, 214, 0.1)', borderColor: '#5856D6', borderWidth: 3, fill: true, tension: 0.4 }] },
+                    options: { responsive: true, maintainAspectRatio: false, plugins: { title: { display: true, text: '未來 6 個月價格趨勢預測', font: { size: 16, weight: 'bold' } } }, scales: { y: { title: { display: true, text: '預測價格 (TWD)' }, ticks: { callback: value => '$' + value.toLocaleString() } } } }
+                });
+            } else { // Default to price distribution bar chart if no forecast data
+                renderPriceDistributionChart(); // Call the specific doughnut chart function
+            }
+        }
+
+        function renderPriceDistributionChart() { // Specific function for doughnut chart on trends tab
+            const ctx = document.getElementById('trendAnalysisChart').getContext('2d');
+            if (trendAnalysisChartInstance) trendAnalysisChartInstance.destroy(); // Use the same instance variable
+            if (filteredProducts.length === 0) return;
+
+            const priceRanges = [ { label: '< 20K', min: 0, max: 20000, color: '#30D158' }, { label: '20K-40K', min: 20000, max: 40000, color: '#34C759' }, { label: '40K-60K', min: 40000, max: 60000, color: '#007AFF' }, { label: '60K-80K', min: 60000, max: 80000, color: '#FF9500' }, { label: '80K+', min: 80000, max: Infinity, color: '#FF3B30' }];
+            const rangeCounts = priceRanges.map(range => filteredProducts.filter(p => p.price >= range.min && p.price < range.max).length);
+
+            trendAnalysisChartInstance = new Chart(ctx, {
+                type: 'doughnut',
+                data: { labels: priceRanges.map(r => r.label), datasets: [{ data: rangeCounts, backgroundColor: priceRanges.map(r => r.color), borderWidth: 2, borderColor: '#fff' }] },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { title: { display: true, text: '價格區間分布', font: { size: 16, weight: 'bold' } }, legend: { position: 'bottom' } } }
+            });
+        }
+
+
+        // === 數據庫管理功能 (Persistence) ===
+        function saveToDatabase(product) {
+            const key = product.dbKey || `${product.name}_${product.source}_${product.price}`; // Ensure dbKey exists or is generated
+            productDatabase.set(key, { ...product, dbKey: key, savedAt: new Date(), lastUpdated: new Date(product.lastUpdated || Date.now()) });
+        }
+
+        function loadFromDatabase() {
+            try {
+                const saved = JSON.parse(localStorage.getItem('macPriceDatabase') || '[]');
+                productDatabase.clear();
+                saved.forEach(product => {
+                    product.lastUpdated = new Date(product.lastUpdated); // Ensure it's a Date object
+                    productDatabase.set(product.dbKey, product);
+                });
+                syncDatabaseToProducts();
+            } catch (error) { console.error('載入數據庫失敗:', error); }
+        }
+
+        function syncDatabaseToProducts() {
+            allProducts = Array.from(productDatabase.values());
+            // filteredProducts = [...allProducts]; // applyFilters will handle this
+        }
+
+        function persistDatabase() {
+            try {
+                const data = Array.from(productDatabase.values());
+                localStorage.setItem('macPriceDatabase', JSON.stringify(data));
+            } catch (error) { console.error('持久化數據庫失敗:', error); }
+        }
+
+        // === 剪貼簿監控功能 ===
+        let clipboardMonitorActive = false;
+        let clipboardMonitorInterval;
+
+        function initClipboardMonitor() { /* Placeholder, actual permission request might be needed */ }
+
+        async function toggleClipboardMonitor() {
+            if (clipboardMonitorActive) stopClipboardMonitor();
+            else await startClipboardMonitor();
+        }
+
+        async function startClipboardMonitor() {
+            try {
+                if (!navigator.clipboard || !navigator.clipboard.readText) throw new Error('瀏覽器不支援剪貼簿 API');
+                await navigator.permissions.query({ name: "clipboard-read" }); // Request permission implicitly
+
+                clipboardMonitorActive = true;
+                document.getElementById('clipboardBtn').innerHTML = '<span>⏸️</span> 停止監控';
+                document.getElementById('clipboardStatus').style.background = '#30D158';
+                document.getElementById('clipboardText').textContent = '監控中...';
+
+                clipboardMonitorInterval = setInterval(async () => {
+                    try {
+                        const text = await navigator.clipboard.readText();
+                        if (text !== lastClipboardCheck && text.length > 10) {
+                            lastClipboardCheck = text; await processClipboardContent(text);
+                        }
+                    } catch (err) { /* console.warn('無法讀取剪貼簿:', err.name, err.message); */ } // Be less noisy
+                }, 2000);
+            } catch (error) { alert('無法啟動剪貼簿監控: ' + error.message); stopClipboardMonitor(); }
+        }
+
+        function stopClipboardMonitor() {
+            clipboardMonitorActive = false;
+            if (clipboardMonitorInterval) clearInterval(clipboardMonitorInterval);
+            document.getElementById('clipboardBtn').innerHTML = '<span>👁️</span> 啟動剪貼簿監控';
+            document.getElementById('clipboardStatus').style.background = '#FF3B30';
+            document.getElementById('clipboardText').textContent = '監控已停止';
+            document.getElementById('clipboardUrls').style.display = 'none';
+        }
+
+        async function processClipboardContent(content) {
+            const urls = extractUrlsFromText(content);
+            if (urls.length > 0) {
+                displayDetectedUrls(urls);
+                for (const url of urls) {
+                    if (!clipboardUrls.has(url)) { clipboardUrls.add(url); await processUrlFromClipboard(url); }
+                }
+            } else if (containsProductInfo(content)) { await processTextFromClipboard(content); }
+        }
+
+        function extractUrlsFromText(text) {
+            const urlPattern = /https?:\/\/[^\s]+/g;
+            const matches = text.match(urlPattern) || [];
+            return matches.filter(url => ['apple.com', 'pchome', 'momo', 'shopee', 'yahoo', 'ruten', 'mac', 'imac'].some(keyword => url.includes(keyword)));
+        }
+        function containsProductInfo(text) { return /mac|imac|macbook|apple|m[123]\s|記憶體|儲存|價格|NT\$|\$[0-9]/i.test(text) && text.length > 50; }
+        function displayDetectedUrls(urls) {
+            const urlContainer = document.getElementById('clipboardUrls');
+            const urlList = document.getElementById('urlList');
+            urlContainer.style.display = 'block';
+            urlList.innerHTML = urls.map(url => `<div style="padding: 0.2rem 0; border-bottom: 1px solid #E5E5EA;"><a href="${url}" target="_blank" style="color: #007AFF; text-decoration: none; font-size: 0.8rem;">${url.length > 60 ? url.substring(0, 60) + '...' : url}</a></div>`).join('');
+        }
+        async function processUrlFromClipboard(url) {
+            showParseStatus(`檢測到新網址，正在處理: ${url.substring(0,50)}...`);
+            try {
+                const product = generateProductFromUrl(url);
+                await enrichProductInfo(product);
+                saveToDatabase(product); persistDatabase(); syncDatabaseToProducts(); applyFilters();
+            } catch (error) { console.error('處理剪貼簿 URL 失敗:', error); }
+            // hideParseStatus(); // Hide status after each URL or after all?
+        }
+        async function processTextFromClipboard(text) {
+            showParseStatus('檢測到產品描述文本，正在解析...');
+            try {
+                const product = await extractProductFromText(text, 'clipboard', Date.now());
+                if (product) {
+                    await enrichProductInfo(product);
+                    saveToDatabase(product); persistDatabase(); syncDatabaseToProducts(); applyFilters();
+                }
+            } catch (error) { console.error('處理剪貼簿文本失敗:', error); }
+            // hideParseStatus();
+        }
+
+        // === 智能補足產品信息 ===
+        async function enrichProductInfo(product) {
+            if (isProductInfoComplete(product)) return product;
+            showParseStatus(`正在搜尋 ${product.name.substring(0,30)}... 的詳細規格...`);
+            try {
+                const enrichedInfo = await mockSearchProductInfo(product);
+                Object.assign(product, enrichedInfo);
+            } catch (error) { console.error('補足產品信息失敗:', error); }
+        }
+        function isProductInfoComplete(product) { return ['processor', 'memory', 'storage', 'screen'].every(f => product[f] && product[f] !== 'Unknown' && product[f] !== '請確認'); }
+        async function mockSearchProductInfo(product) {
+            return new Promise(resolve => setTimeout(() => resolve({
+                description: `${product.name} 的詳細規格信息`, gpu: detectGPU(product.name), cpu: product.processor,
+                displayTech: detectDisplayTech(product.name), connectivity: 'Wi-Fi 6E, Bluetooth 5.3',
+                ports: detectPorts(product.name), weight: detectWeight(product.name), battery: detectBattery(product.name)
+            }), 1000));
+        }
+        function detectGPU(name) { if (name.includes('M3 Ultra')) return '76-核心 GPU'; if (name.includes('M3 Max')) return '40-核心 GPU'; if (name.includes('M3 Pro')) return '18-核心 GPU'; if (name.includes('M3')) return '10-核心 GPU'; if (name.includes('M2')) return '8-核心 GPU'; return '整合式 GPU'; }
+        function detectDisplayTech(name) { if (name.includes('Pro')) return 'Liquid Retina XDR'; if (name.includes('iMac')) return '4.5K Retina'; return 'Liquid Retina'; }
+        function detectPorts(name) { if (name.includes('Pro')) return 'Thunderbolt 4 x3, HDMI, SDXC'; if (name.includes('Air')) return 'Thunderbolt 4 x2, 3.5mm'; if (name.includes('mini')) return 'Thunderbolt 4 x2, USB-A x2, HDMI'; return 'Thunderbolt 4'; }
+        function detectWeight(name) { if (name.includes('16')) return '2.16 kg'; if (name.includes('14')) return '1.55 kg'; if (name.includes('Air')) return '1.24 kg'; return '請確認'; }
+        function detectBattery(name) { if (name.includes('Pro 16')) return '高達 22 小時'; if (name.includes('Pro 14')) return '高達 18 小時'; if (name.includes('Air')) return '高達 18 小時'; return '請確認'; }
+
+        // 處理文件上傳
+        async function handleFileUpload(event) {
+            const files = Array.from(event.target.files); // Allow multiple files
+            if (!files.length) return;
+
+            const fileNames = files.map(f => f.name).join(', ');
+            document.getElementById('fileName').textContent = `已選擇 ${files.length} 個文件: ${fileNames}`;
+            showParseStatus(`正在處理 ${files.length} 個文件...`);
+            let totalProductsAdded = 0;
+
+            try {
+                for (let i = 0; i < files.length; i++) {
+                    const file = files[i];
+                    updateParseProgress((i / files.length) * 100, `正在解析文件: ${file.name}`);
+                    
+                    let content;
+                    const fileType = file.name.split('.').pop().toLowerCase();
+                    content = await readFileContent(file); // Use existing readFileContent
+
+                    let productsFromFile = [];
+                    if (fileType === 'csv') {
+                        productsFromFile = await parseCSVContent(content, file.name);
+                    } else {
+                        productsFromFile = await parseTextContent(content, fileType, file.name);
+                    }
+                    
+                    productsFromFile.forEach(product => {
+                        if(product) { // Ensure product is not null
+                           saveToDatabase(product);
+                           totalProductsAdded++;
+                        }
+                    });
+                }
+                persistDatabase();
+                syncDatabaseToProducts();
+                applyFilters();
+                hideParseStatus();
+                alert(`成功解析 ${files.length} 個文件！新增了 ${totalProductsAdded} 個商品。`);
+                document.getElementById('fileUpload').value = ''; // Reset file input
+                document.getElementById('fileName').textContent = '支援多檔案上傳：HTML、Markdown、TXT、CSV';
+
+
+            } catch (error) {
+                console.error('文件解析錯誤:', error);
+                alert('文件解析失敗，請檢查文件格式。');
+                hideParseStatus();
+            }
+        }
+        
+        // 處理貼上內容
+        async function handlePasteContent() {
+            try {
+                const text = await navigator.clipboard.readText();
+                if (!text) {
+                    alert('剪貼簿為空。');
+                    return;
+                }
+                showParseStatus('正在解析貼上的內容...');
+                updateParseProgress(50, '分析文本結構...');
+                const product = await extractProductFromText(text, '貼上的內容', Date.now());
+                if (product) {
+                    await enrichProductInfo(product);
+                    saveToDatabase(product);
+                    persistDatabase();
+                    syncDatabaseToProducts();
+                    applyFilters();
+                    alert('成功從貼上的內容解析商品！');
+                } else {
+                    alert('未能從貼上的內容解析出有效商品資訊。');
+                }
+                hideParseStatus();
+            } catch (error) {
+                console.error('貼上內容解析錯誤:', error);
+                alert('讀取剪貼簿失敗或解析錯誤。');
+                hideParseStatus();
+            }
+        }
+
+
+        // 解析 CSV 內容
+        async function parseCSVContent(content, source) { // Returns array of products
+            return new Promise((resolve) => {
+                Papa.parse(content, {
+                    header: true, dynamicTyping: true, skipEmptyLines: true,
+                    delimitersToGuess: [',', '\t', '|', ';'],
+                    complete: function(results) {
+                        const products = results.data.map((row, index) => 
+                            extractProductFromCSVRow(row, source, Date.now() + index) // Pass unique ID
+                        ).filter(product => product !== null);
+                        resolve(products); // Resolve with the array of products
+                    }
+                });
+            });
+        }
+
+
+        // 從 CSV 行提取商品信息
+        function extractProductFromCSVRow(row, source, id) { // Added id parameter
+            const cleanRow = {};
+            Object.keys(row).forEach(key => { cleanRow[key.trim()] = row[key]; });
+            try {
+                const nameField = findField(cleanRow, ['name', 'title', '名稱', '標題', '商品名稱', 'product']);
+                const priceField = findField(cleanRow, ['price', '價格', 'cost', 'amount', '金額']);
+                if (!nameField || !priceField || !cleanRow[nameField] || !cleanRow[priceField]) return null;
+
+                const price = extractPrice(String(cleanRow[priceField]));
+                if (price === null) return null;
+                
+                const name = String(cleanRow[nameField]).trim();
+
+                return {
+                    id: id, name: name,
+                    model: detectModel(name || cleanRow[findField(cleanRow, ['model', '型號'])] || ''),
+                    processor: detectProcessor(name || cleanRow[findField(cleanRow, ['processor', 'cpu'])] || ''),
+                    memory: extractMemory(cleanRow[findField(cleanRow, ['memory', 'ram'])] || name || ''),
+                    storage: extractStorage(cleanRow[findField(cleanRow, ['storage', 'ssd'])] || name || ''),
+                    screen: extractScreen(name || cleanRow[findField(cleanRow, ['screen', 'display'])] || ''),
+                    condition: detectCondition(name || cleanRow[findField(cleanRow, ['condition', '狀況'])] || ''),
+                    price: price, originalPrice: extractPrice(String(cleanRow[findField(cleanRow, ['originalPrice', '原價'])])) || price,
+                    source: source, url: String(cleanRow[findField(cleanRow, ['url', 'link'])] || '#'),
+                    availability: String(cleanRow[findField(cleanRow, ['availability', '庫存'])] || '請確認'),
+                    warranty: String(cleanRow[findField(cleanRow, ['warranty', '保固'])] || '請確認'),
+                    lastUpdated: new Date()
+                };
+            } catch (error) { console.error('CSV 行解析錯誤:', error, row); return null; }
+        }
+
+        // 解析文本內容 (HTML/MD/TXT)
+        async function parseTextContent(content, fileType, source) { // Returns array of products
+            let cleanContent = content;
+            if (fileType === 'html') {
+                cleanContent = cleanContent.replace(/<script[\s\S]*?<\/script>/gi, '');
+                cleanContent = cleanContent.replace(/<style[\s\S]*?<\/style>/gi, '');
+                cleanContent = cleanContent.replace(/<[^>]*>/g, ' ');
+            }
+            if (fileType === 'md') {
+                cleanContent = cleanContent.replace(/```[\s\S]*?```/g, '');
+                cleanContent = cleanContent.replace(/`[^`]*`/g, '');
+                cleanContent = cleanContent.replace(/[#*_\[\]()]/g, ' ');
+            }
+            const paragraphs = cleanContent.split(/\n\s*\n|\r\n\s*\r\n/).filter(p => p.trim().length > 20); // Min length for a paragraph
+            const products = [];
+            for (let i = 0; i < paragraphs.length; i++) {
+                updateParseProgress((i / paragraphs.length) * 100, `解析段落 ${i + 1}/${paragraphs.length}`);
+                const product = await extractProductFromText(paragraphs[i], source, Date.now() + i + Math.random()); // Pass unique ID
+                if (product) products.push(product);
+                if (i % 10 === 0) await new Promise(resolve => setTimeout(resolve, 5)); // Avoid blocking
+            }
+            return products; // Return the array of products
+        }
+
+
+        // 從文本段落提取商品信息
+        async function extractProductFromText(text, source, id) { // Added id parameter
+            const macKeywords = /mac|imac|macbook|mac mini|mac studio|apple/i;
+            if (!macKeywords.test(text)) return null;
+
+            const price = extractPrice(text);
+            if (price === null) return null;
+
+            const nameMatch = text.match(/^[^\n\r]*(?:mac|imac|macbook)[^\n\r]*/i) || 
+                             text.match(/(?:mac|imac|macbook)[^\n\r]*/i);
+            if (!nameMatch) return null;
+            const name = nameMatch[0].trim().substring(0, 100);
+
+            return {
+                id: id, name: name, model: detectModel(name), processor: detectProcessor(text),
+                memory: extractMemory(text), storage: extractStorage(text), screen: extractScreen(text),
+                condition: detectCondition(text), price: price, originalPrice: price, source: source,
+                url: extractUrl(text) || '#', availability: '請確認', warranty: '請確認', lastUpdated: new Date()
+            };
+        }
+
+        // === 智能提取函數 ===
+        function findField(obj, keywords) {
+            const keys = Object.keys(obj);
+            for (const keyword of keywords) {
+                const found = keys.find(key => key.toLowerCase().includes(keyword.toLowerCase()) || keyword.toLowerCase().includes(key.toLowerCase()));
+                if (found && obj[found] !== null && obj[found] !== undefined) return found; // Check for null/undefined
+            }
+            // Fallback: if no keyword matches, try to find a key that is not explicitly empty or null
+            for (const key of keys) {
+                if (obj[key] !== null && obj[key] !== undefined && String(obj[key]).trim() !== '') return key;
+            }
+            return keys[0]; // Last resort
+        }
+        function extractPrice(text) {
+            if (typeof text !== 'string' && typeof text !== 'number') return null;
+            const sText = String(text);
+            const patterns = [ /\$\s*([0-9,]+)/, /NT\$\s*([0-9,]+)/, /([0-9,]+)\s*元/, /price[:\s]+([0-9,]+)/i, /([0-9,]+)\s*TWD/i, /([0-9]{4,})/ ]; // Min 4 digits for generic number
+            for (const pattern of patterns) {
+                const match = sText.match(pattern);
+                if (match && match[1]) {
+                    const number = parseInt(match[1].replace(/[^\d]/g, ''));
+                    if (number >= 1000 && number <= 500000) return number;
+                }
+            }
+            return null;
+        }
+        function detectModel(text) { if (!text) return 'Mac'; text = String(text).toLowerCase(); if (text.includes('macbook air')) return 'MacBook Air'; if (text.includes('macbook pro')) return 'MacBook Pro'; if (text.includes('imac')) return 'iMac'; if (text.includes('mac mini')) return 'Mac mini'; if (text.includes('mac studio')) return 'Mac Studio'; if (text.includes('macbook')) return 'MacBook'; return 'Mac'; }
+        function detectProcessor(text) { if (!text) return 'Unknown'; text = String(text); const ps = ['M3 Ultra', 'M3 Max', 'M3 Pro', 'M3', 'M2 Ultra', 'M2 Max', 'M2 Pro', 'M2', 'M1 Ultra', 'M1 Max', 'M1 Pro', 'M1']; for (const p of ps) if (text.toLowerCase().includes(p.toLowerCase())) return `Apple ${p}`; if (text.includes('Intel')) return 'Intel'; return 'Apple Silicon'; }
+        function extractMemory(text) { if (!text) return '8GB'; text = String(text); const m = text.match(/(\d+)\s*GB/i); if (m && m[1]) { const s = parseInt(m[1]); if (s >= 4 && s <= 128) return `${s}GB`; } return '8GB'; }
+        function extractStorage(text) { if (!text) return '256GB'; text = String(text); const m = text.match(/(\d+)\s*(GB|TB)/i); if (m && m[1] && m[2]) { const s = parseInt(m[1]); const u = m[2].toUpperCase(); if (u === 'TB' && s >= 1 && s <= 8) return `${s}TB`; if (u === 'GB' && s >= 128 && s <= 8192) return `${s}GB`; } return '256GB'; }
+        function extractScreen(text) { if (!text) return '13.3吋'; text = String(text); const m = text.match(/(\d+(?:\.\d+)?)\s*(?:吋|inch|")/i); if (m && m[1]) return `${m[1]}吋`; if (text.includes('Air')) return '13.6吋'; if (text.includes('Pro') && text.includes('14')) return '14.2吋'; if (text.includes('Pro') && text.includes('16')) return '16.2吋'; if (text.includes('iMac')) return '24吋'; if (text.includes('mini')) return '無'; return '13.3吋'; }
+        function detectCondition(text) { if (!text) return 'new'; text = String(text).toLowerCase(); if (text.includes('整新') || text.includes('refurbished')) return 'refurbished'; if (text.includes('二手') || text.includes('used')) { if (text.includes('a級') || text.includes('grade a')) return 'used-a'; if (text.includes('b級') || text.includes('grade b')) return 'used-b'; if (text.includes('c級') || text.includes('grade c')) return 'used-c'; return 'used-a'; } if (text.includes('教育') || text.includes('學生') || text.includes('student')) return 'student'; return 'new'; }
+        function extractUrl(text) { const m = String(text).match(/https?:\/\/[^\s'"]+/); return m ? m[0] : null; }
+
+        // === 批量處理功能 ===
+        async function processBulkUrls() { // Made async
+            const urls = document.getElementById('bulkUrls').value.split('\n').map(url => url.trim()).filter(url => url && url.startsWith('http'));
+            if (urls.length === 0) { alert('請輸入至少一個有效的 URL'); return; }
+            showParseStatus(`準備處理 ${urls.length} 個網址`);
+            let productsAddedCount = 0;
+            for (let i = 0; i < urls.length; i++) {
+                updateParseProgress((i / urls.length) * 100, `處理網址 ${i + 1}/${urls.length}: ${urls[i].substring(0,50)}...`);
+                try {
+                    const product = generateProductFromUrl(urls[i]);
+                    await enrichProductInfo(product); // Enrich before saving
+                    saveToDatabase(product);
+                    productsAddedCount++;
+                    await new Promise(resolve => setTimeout(resolve, 200)); // Shorter delay
+                } catch (error) { console.error(`處理 URL 失敗: ${urls[i]}`, error); }
+            }
+            persistDatabase(); syncDatabaseToProducts(); applyFilters(); hideParseStatus();
+            document.getElementById('bulkUrls').value = '';
+            alert(`批量處理完成！成功新增 ${productsAddedCount} 個商品。`);
+        }
+
+        function clearAllData() {
+            if (confirm('確定要清空所有商品數據嗎？此操作無法恢復。')) {
+                productDatabase.clear(); // Clear the map
+                localStorage.removeItem('macPriceDatabase'); // Clear local storage
+                allProducts = []; filteredProducts = []; parseResults = [];
+                applyFilters(); // This will re-render everything based on empty data
+                alert('所有數據已清空。');
+            }
+        }
+
+        // === 進度顯示功能 ===
+        function showParseStatus(message) { document.getElementById('parseStatus').style.display = 'block'; document.getElementById('parseDetails').textContent = message; document.getElementById('progressBar').style.width = '0%'; }
+        function updateParseProgress(percentage, message) { document.getElementById('progressBar').style.width = `${percentage}%`; document.getElementById('parseDetails').textContent = message; }
+        function hideParseStatus() { setTimeout(() => { document.getElementById('parseStatus').style.display = 'none'; }, 1000); }
+        
+        function copyPromptToClipboard() {
+            if (currentPrompt) {
+                navigator.clipboard.writeText(currentPrompt)
+                    .then(() => alert('Prompt 已複製到剪貼簿！'))
+                    .catch(err => alert('複製失敗: ' + err));
+            }
+        }
+
+        // 初始化應用程式
+        document.addEventListener('DOMContentLoaded', initializeApp);
+    </script>
+</body>
+</html>
