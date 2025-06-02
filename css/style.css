@@ -1,0 +1,70 @@
+/* 
+This file contains the styles for the Mac Price Compare application. 
+It defines the layout, colors, fonts, and other visual aspects of the website.
+*/
+
+body {
+    font-family: 'Arial', sans-serif;
+    background-color: #F2F2F7;
+    color: #1D1D1F;
+    margin: 0;
+    padding: 0;
+}
+
+header {
+    background-color: #007AFF;
+    color: white;
+    padding: 20px;
+    text-align: center;
+}
+
+h1 {
+    font-size: 2.5em;
+    margin: 0;
+}
+
+.container {
+    width: 90%;
+    max-width: 1200px;
+    margin: 20px auto;
+}
+
+.input-section {
+    margin-bottom: 20px;
+}
+
+.input-section input[type="text"],
+.input-section input[type="file"] {
+    width: 100%;
+    padding: 10px;
+    margin: 5px 0;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+}
+
+.button {
+    background-color: #34C759;
+    color: white;
+    padding: 10px 15px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+}
+
+.button:hover {
+    background-color: #30D158;
+}
+
+.chart-container {
+    margin-top: 30px;
+}
+
+.footer {
+    text-align: center;
+    padding: 20px;
+    background-color: #007AFF;
+    color: white;
+    position: relative;
+    bottom: 0;
+    width: 100%;
+}

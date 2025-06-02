@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mac price comparison website</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <header>
+        <h1>Mac price comparison tool</h1>
+    </header>
+    <main>
+        <section id="input-section">
+            <h2>Data Input</h2>
+            <textarea id="url-input" placeholder="Please enter product URL or upload file"></textarea>
+            <button id="process-button">處理數據</button>
+        </section>
+        <section id="results-section">
+            <h2>比較結果</h2>
+            <div id="results-container"></div>
+        </section>
+        <section id="charts-section">
+            <h2>視覺化分析</h2>
+            <canvas id="price-chart"></canvas>
+        </section>
+    </main>
+    <footer>
+        <p>&copy; Mac price comparison website</p>
+    </footer>
+    <script src="js/main.js"></script>
+    <script src="js/parser.js"></script>
+    <script src="js/database.js"></script>
+    <script src="js/charts.js"></script>
+    <script src="js/clipboard.js"></script>
+    <script src="js/utils.js"></script>
+</body>
+</html>
